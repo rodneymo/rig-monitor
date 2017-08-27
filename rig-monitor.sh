@@ -32,7 +32,7 @@ do
 
 	if [ "$SMART_PLUGS" == "1" ];then
 		# read power usage from smart plug
-		POWER_USAGE=`${BASE_DIR}/utils/tplink-smartplug.py -t ${PLUG_IP} -j '{"emeter":{"get_realtime":{}}}' | grep Received | sed 's/.*power\":\(\w\+\).*/\1/'`
+		POWER_USAGE=`${BASE_DIR}/tplink-smartplug/tplink-smartplug.py -t ${PLUG_IP} -j '{"emeter":{"get_realtime":{}}}' | grep Received | sed 's/.*power\":\(\w\+\).*/\1/'`
 	else
 		POWER_USAGE=0
 	fi
