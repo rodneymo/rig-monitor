@@ -1,0 +1,14 @@
+Intro
+
+
+I manage my mining rig farm remotely. When I say remotely I mean 3000 miles away from where I actually live. Thus, I needed a reliable monitoring solution to monitor status, performance and alert me in case of rig outages.
+
+I developed this in a couple of days and have been running it for over a month. It's pretty stable.
+I am using a raspberry pi (version 1) as managment server because of the small footprint and low power consumption, but you can run it on any linux server.
+
+Currently these scripts ONLY support Claymore's miner. Support for other miners will eventually come later. All my rigs run Windows, but, assuming claymore's linux version produces the same http output format as the Windows this should work as well on rigs running linux (and Claymore's). If it doesn't and you need it then please create an issue and attach the plaintext output claymore's remote management port.
+
+I am also using TP Link HS110 smart plugs (this option can be disabled in the config file). These plugs are great and I use them monitor the power usage and remotely reboot rigs in case of boot issues). Beware that, if you want to monitor power consumption you'll need the HS110s. The HS100 do not support  power monitoring.
+
+For full installation instructions please check 
+
