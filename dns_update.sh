@@ -7,4 +7,4 @@ cd $BASE_DIR
 
 rm ${LOG_DIR}/update?hostname=*
 MYIP=`dig +short myip.opendns.com @resolver1.opendns.com`
-wget "https://api.dynu.com/nic/update?hostname=<hostname>&myip=${MYIP}&myipv6=no&username=<user>&password=<password>"
+wget "https://api.dynu.com/nic/update?hostname=<hostname>&myip=${MYIP}&myipv6=no&username=<user>&password=<password>" -a $LOG_DIR/dns_update.log
