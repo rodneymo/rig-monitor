@@ -1,6 +1,7 @@
 #!/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-BASE_DIR='.'
+BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $BASE_DIR
 
 . ${BASE_DIR}/conf/rig-monitor.conf
 
