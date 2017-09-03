@@ -16,6 +16,10 @@ else
 	touch  ${BASE_DIR}/run/POOL_LOCK
 fi
 
+if [ "$1" == "-trace" ];then
+	set -x
+fi
+
 SAVEIFS=$IFS
 
 # FETCH POOL DATA VIA HTTP
@@ -27,7 +31,9 @@ do
 	if [ "$POOL_NAME" == "ETHERMINE" ]; then
 		BASE_API='https://api.ethermine.org'
 		STATS_URL="${BASE_API}/miner/${WALLET_ADDR}/currentStats"
+		#echo $STATS_URL
 		PAYOUT_URL="${BASE_API}/miner/${WALLET_ADDR}/payouts"
+		#echo $PAYOUT_URL
 
 		curl "${STATS_URL}" | jq -r '.data | [.time,.lastSeen,.reportedHashrate,.currentHashrate,.validShares,.invalidShares,.staleShares,.averageHashrate,.activeWorkers,.unpaid,.unconfirmed,.coinsPerMin,.usdPerMin,.btcPerMin] | @csv' >> ${DATA_DIR}/$ETHERMINE_STATS_DATA_FILE
 		curl "${PAYOUT_URL}" | jq -r '.data[] | [.paidOn,.start,.end,.amount,.txHash] | @csv' >> ${DATA_DIR}/$ETHERMINE_PAYOUTS_DATA_FILE
@@ -60,19 +66,20 @@ if [ -f ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE} ] && [ -f ${DATA_DIR}/${ETHERMI
 	mysql -vvv -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_ethermine_data.sql
 
 
-	# update bookkeeping file
-	LAST_STATS_RECORD=`tail -1 ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE} | cut -d',' -f 1`
-	$(bookkeeping "LAST_INGESTED_ETHERMINE_STATS" ${LAST_STATS_RECORD})
-	echo "update last ingested ethermine pool stats to: $LAST_STATS_RECORD"
-
-	# update bookkeeping file
-	LAST_PAYOUTS_RECORD=`tail -1 ${DATA_DIR}/${ETHERMINE_PAYOUTS_DATA_FILE} | cut -d',' -f 1`
-	$(bookkeeping "LAST_INGESTED_ETHERMINE_PAYOUTS" ${LAST_PAYOUTS_RECORD})
-	echo "update last ingested ethermine pool payout to: $LAST_PAYOUTS_RECORD"
-
 fi
 
 IFS=$SAVEIFS
+
+# update bookkeeping file
+LAST_STATS_RECORD=`tail -1 ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE} | cut -d',' -f 1`
+$(bookkeeping "LAST_INGESTED_ETHERMINE_STATS" ${LAST_STATS_RECORD})
+echo "updating last ingested ethermine pool stats to: $LAST_STATS_RECORD"
+
+# update bookkeeping file
+LAST_PAYOUTS_RECORD=`tail -1 ${DATA_DIR}/${ETHERMINE_PAYOUTS_DATA_FILE} | cut -d',' -f 1`
+$(bookkeeping "LAST_INGESTED_ETHERMINE_PAYOUTS" ${LAST_PAYOUTS_RECORD})
+echo "updating last ingested ethermine pool payout to: $LAST_PAYOUTS_RECORD"
+
 
 rm ${BASE_DIR}/run/POOL_LOCK 
 
