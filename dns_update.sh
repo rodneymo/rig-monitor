@@ -5,6 +5,10 @@ cd $BASE_DIR
 
 . ${BASE_DIR}/conf/rig-monitor.conf
 
-rm ${LOG_DIR}/update?hostname=*
+# epoch TIME
+TIME=`date +%s`
+
 MYIP=`dig +short myip.opendns.com @resolver1.opendns.com`
-wget "https://api.dynu.com/nic/update?hostname=${DYNU_HOST}&myip=${MYIP}&myipv6=no&username=${DYNU_USER}&password=${DYNU_PWD}" -a $LOG_DIR/dns_update.log
+echo -n "${TIME}: " >>$LOG_DIR/dns_update.log
+wget -q -O - "https://api.dynu.com/nic/update?hostname=${DYNU_HOST}&myip=${MYIP}&myipv6=no&username=${DYNU_USER}&password=${DYNU_PWD}" >>$LOG_DIR/dns_update.log
+echo "" >>$LOG_DIR/dns_update.log
