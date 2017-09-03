@@ -22,20 +22,28 @@ if [ -f ${BASE_DIR}/run/CLEANUP_LOCK ]; then
 	exit
 else
         touch  ${BASE_DIR}/run/CLEANUP_LOCK
-        if [ ! -f ${BASE_DIR}/run/CLEANUP_BOOKEEPER.log ]; then
-               	echo "1502928000" > ./run/CLEANUP_BOOKEEPER.log 
-	fi
-	LAST_CLEANUP=`cat ${BASE_DIR}/run/CLEANUP_BOOKEEPER.log`
+	LAST_CLEANUP=$(bookkeeping LAST_CLEANUP)
 	echo "Last cleanup:" `date -d @${LAST_CLEANUP}` ", ${LAST_CLEANUP} (EPOCH)"
 fi
 
-#  PURGE OLD DATA FROM DB
+#  PURGE CLAYMORE RIG DATA FROM DB
 EXPIRED_RIG_DATA_SQL="DELETE FROM status_rig WHERE UNIX_TIMESTAMP(time) < ${EXPIRED_DATA};"
-EXPIRED_GPU_DATA_SQL="DELETE FROM status_gpu WHERE UNIX_TIMESTAMP(time) < ${EXPIRED_DATA};"
 echo "SQL TO REMOVE EXPIRED RIG_STATUS DATA: $EXPIRED_RIG_DATA_SQL"
-echo "SQL TO REMOVE EXPIRED GPU_STATUS DATA: $EXPIRED_GPU_DATA_SQL"
 echo $EXPIRED_RIG_DATA_SQL | mysql -v -v -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata
+
+#  PURGE CLAYMORE GPU DATA FROM DB
+EXPIRED_GPU_DATA_SQL="DELETE FROM status_gpu WHERE UNIX_TIMESTAMP(time) < ${EXPIRED_DATA};"
+echo "SQL TO REMOVE EXPIRED GPU_STATUS DATA: $EXPIRED_GPU_DATA_SQL"
 echo $EXPIRED_GPU_DATA_SQL | mysql -v -v -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata
+
+if [ "$POOL_NAME" == "ETHERMINE" ]; then
+	EXPIRED_ETHERMINE_STATS_SQL="DELETE FROM ethermine_stats WHERE UNIX_TIMESTAMP(time) < ${EXPIRED_DATA};"
+	echo "SQL TO REMOVE EXPIRED ETHERMINE STATS DATA: $EXPIRED_ETHERMINE_STATS_SQL"
+	echo $EXPIRED_ETHERMINE_STATS_SQL | mysql -v -v -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata
+
+	EXPIRED_ETHERMINE_PAYOUTS_SQL="DELETE FROM ethermine_payouts WHERE UNIX_TIMESTAMP(paidon) < ${EXPIRED_DATA};"
+	echo "SQL TO REMOVE EXPIRED ETHERMINE PAYOUTS DATA: $EXPIRED_ETHERMINE_PAYOUTS_SQL"
+	echo $EXPIRED_ETHERMINE_PAYOUTS_SQL | mysql -v -v -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata
 
 #archive old status and info files
 while (( LAST_CLEANUP < TIME )); do
@@ -45,21 +53,19 @@ while (( LAST_CLEANUP < TIME )); do
 		_LAST_CLEANUP=`date -d @${LAST_CLEANUP} +%d-%m-%Y`
 	fi
 	
-	OLD_INFO_DATA_FILE="info_data_${_LAST_CLEANUP}.csv"
-	OLD_STATUS_DATA_FILE="status_data_${_LAST_CLEANUP}.csv"
-	echo "${OLD_INFO_DATA_FILE} will be archived"
-	echo "${OLD_STATUS_DATA_FILE} will be archived"
+	echo "older files up to ${_LAST_CLEANUP} will be archived"
 
-	if [ -f ${DATA_DIR}/${OLD_STATUS_DATA_FILE} ] || [ -f ${DATA_DIR}/${OLD_INFO_DATA_FILE} ] ; then
+	if ls ${DATA_DIR}/*${_LAST_CLEANUP}.csv 1> /dev/null 2>&1; then
 		tar --remove-files -czvf ${DATA_BKUP}/data_files_${_LAST_CLEANUP}.tar.gz ${DATA_DIR}/*${_LAST_CLEANUP}.csv
-		echo "Files ${DATA_DIR}/${OLD_STATUS_DATA_FILE} and ${DATA_DIR}/${OLD_INFO_DATA_FILE} archived and removed!"
+		echo "Files archived and removed!"
 	else
 		echo "Files not found!"
 	fi
+
 	LAST_CLEANUP=$(( LAST_CLEANUP + ( 24 * 60 * 60 ) ))
 done 
 
-echo "$LAST_CLEANUP" > ${BASE_DIR}/run/CLEANUP_BOOKEEPER.log
+$(bookkeeping "LAST_CLEANUP" ${LAST_CLEANUP})
 
 rm ${BASE_DIR}/run/CLEANUP_LOCK
 
