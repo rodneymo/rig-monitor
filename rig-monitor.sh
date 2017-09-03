@@ -8,14 +8,15 @@ cd $BASE_DIR
 # epoch TIME
 TIME=`date +%s`
 
-if [ -f ${BASE_DIR}/run/LOCK ]; then
+if [ -f ${BASE_DIR}/run/RIG_LOCK ]; then
     	echo "rig-monitor process still running! Exiting..."
 	exit
-elif [ -f ${BASE_DIR}/run/INGEST_LOCK ]; then
-    	echo "ingest process still running! Exiting..."
-	exit
 else
-	touch  ${BASE_DIR}/run/LOCK
+	touch  ${BASE_DIR}/run/RIG_LOCK
+fi
+
+if [ "$1" == "-trace" ];then
+	set -x
 fi
 
 SAVEIFS=$IFS
@@ -42,9 +43,32 @@ do
 	awk -f ${BASE_DIR}/utils/parse_status_data.awk -v time=${TIME} rig_name=${RIG_NAME} power_usage=${POWER_USAGE} <<< "$CLAYMORE_READOUT" >> ${DATA_DIR}/${STATUS_DATA_FILE}
 
 done 
+
+#################
+fi
+
+if [ -f ${DATA_DIR}/${STATUS_DATA_FILE} ]; then
+
+        echo "ingesting claymore status data..."
+        LAST_RECORD=$(bookkeeping "LAST_INGESTED_CLAYMORE_STATUS")
+        echo "last ingested status record: $LAST_RECORD"
+
+	# filter out old records
+	awk -f ${BASE_DIR}/utils/filter_status_records.awk -v last_record=$LAST_INGESTED_RECORD record_type=RIG ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/rig_status.tmp
+	awk -f ${BASE_DIR}/utils/filter_status_records.awk -v last_record=$LAST_INGESTED_RECORD record_type=GPU ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/gpu_status.tmp
+	# INSERT STATUS DATA INTO DB	
+	mysql -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_status_data.sql
+
+	LAST_INGESTED_RECORD=`tail -1 ${DATA_DIR}/${STATUS_DATA_FILE} | cut -d',' -f 2`
+	echo $LAST_INGESTED_RECORD > ${BASE_DIR}/run/INGEST_BOOKEEPER.log
+
+	# update bookkeeping file
+	LAST_RECORD=`tail -1 ${DATA_DIR}/${STATUS_DATA_FILE} | cut -d',' -f 2`
+	$(bookkeeping "LAST_INGESTED_CLAYMORE_STATUS" ${LAST__RECORD})
+	echo "updating last ingested claymore status record to: $LAST_RECORD"
+fi
+
 IFS=$SAVEIFS
 
-${BASE_DIR}/ingest-data.sh
-
-rm ${BASE_DIR}/run/LOCK
+rm ${BASE_DIR}/run/RIG_LOCK
 
