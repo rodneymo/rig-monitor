@@ -32,7 +32,7 @@ do
 	CLAYMORE_READOUT=`timeout 5s w3m -dump -cols 1000 http://${RIG_IP}:3333 | awk -vRS= 'END{print}'`
 	#echo "$CLAYMORE_READOUT" # This is needed to presever the newlines characters
 
-	awk -f ${BASE_DIR}/utils/parse_info_data.awk -v rig_name=${RIG_NAME} <<< "$CLAYMORE_READOUT" >> ${DATA_DIR}/${INFO_DATA_FILE}
+	awk -f ${BASE_DIR}/awk/filter_claymore_gpu_specs.awk -v rig_name=${RIG_NAME} <<< "$CLAYMORE_READOUT" >> ${DATA_DIR}/${INFO_DATA_FILE}
 done 
 
 if [ -f ${DATA_DIR}/${INFO_DATA_FILE} ]; then

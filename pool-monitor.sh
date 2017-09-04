@@ -25,11 +25,10 @@ SAVEIFS=$IFS
 # FETCH POOL DATA VIA HTTP
 for POOL_LINE in "${POOL_WALLET_LIST[@]}"
 do
-	IFS=$',' read POOL_NAME WALLET_ADDR <<<${POOL_LINE}
+	IFS=$',' read POOL_NAME BASE_API POOL_API_TOKEN WALLET_ADDR <<<${POOL_LINE}
 	#echo $POOL_NAME $WALLET_ADDR 
 
 	if [ "$POOL_NAME" == "ETHERMINE" ]; then
-		BASE_API='https://api.ethermine.org'
 		STATS_URL="${BASE_API}/miner/${WALLET_ADDR}/currentStats"
 		#echo $STATS_URL
 		PAYOUT_URL="${BASE_API}/miner/${WALLET_ADDR}/payouts"
@@ -38,7 +37,11 @@ do
 		curl -s "${STATS_URL}" | jq -r '.data | [.time,.lastSeen,.reportedHashrate,.currentHashrate,.validShares,.invalidShares,.staleShares,.averageHashrate,.activeWorkers,.unpaid,.unconfirmed,.coinsPerMin,.usdPerMin,.btcPerMin] | @csv' >> ${DATA_DIR}/$ETHERMINE_STATS_DATA_FILE
 		curl -s "${PAYOUT_URL}" | jq -r '.data[] | [.paidOn,.start,.end,.amount,.txHash] | @csv' >> ${DATA_DIR}/$ETHERMINE_PAYOUTS_DATA_FILE
 
+	elif [ "$POOL_NAME" == "MPOS" ]; then
+		DASHBOARD_URL="${BASE_API}/index.php?page=api&action=getdashboarddata&api_key=${POOL_API_TOKEN}"
+		#echo $DASHBOARD_URL
 
+		curl -s "${DASHBOARD_URL}" | jq -r '.data | [.time,.lastSeen,.reportedHashrate,.currentHashrate,.validShares,.invalidShares,.staleShares,.averageHashrate,.activeWorkers,.unpaid,.unconfirmed,.coinsPerMin,.usdPerMin,.btcPerMin] | @csv' >> ${DATA_DIR}/${MPOS_DATA_FILE}
 	fi
 done
 
@@ -54,13 +57,13 @@ if [ -f ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE} ] && [ -f ${DATA_DIR}/${ETHERMI
 	sort --field-separator=',' ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE} | uniq > ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE}.tmp
 	mv ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE}.tmp ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE}
 	# filter out old records
-        awk -f ${BASE_DIR}/utils/filter_old_records.awk -v last_record=$LAST_STATS_RECORD ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE} > ${TMP_DIR}/ethermine_stats.tmp
+        awk -f ${BASE_DIR}/awk/filter_out_old_records.awk -v last_record=$LAST_STATS_RECORD ${DATA_DIR}/${ETHERMINE_STATS_DATA_FILE} > ${TMP_DIR}/ethermine_stats.tmp
 
 	# sort and remove old entries
 	sort --field-separator=',' ${DATA_DIR}/${ETHERMINE_PAYOUTS_DATA_FILE} | uniq > ${DATA_DIR}/${ETHERMINE_PAYOUTS_DATA_FILE}.tmp
 	mv ${DATA_DIR}/${ETHERMINE_PAYOUTS_DATA_FILE}.tmp ${DATA_DIR}/${ETHERMINE_PAYOUTS_DATA_FILE}
 	# filter out old records
-        awk -f ${BASE_DIR}/utils/filter_old_records.awk -v last_record=$LAST_PAYOUTS_RECORD ${DATA_DIR}/${ETHERMINE_PAYOUTS_DATA_FILE} > ${TMP_DIR}/ethermine_payouts.tmp
+        awk -f ${BASE_DIR}/awk/filter_out_old_records.awk -v last_record=$LAST_PAYOUTS_RECORD ${DATA_DIR}/${ETHERMINE_PAYOUTS_DATA_FILE} > ${TMP_DIR}/ethermine_payouts.tmp
 
 	# insert data into DB
 	mysql -vvv -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_ethermine_data.sql
