@@ -4,6 +4,7 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $BASE_DIR
 
 . ${BASE_DIR}/conf/rig-monitor.conf
+. ${BASE_DIR}/utils/functions
 
 # epoch TIME
 _TIME=`date +%s`
@@ -44,6 +45,7 @@ if [ "$POOL_NAME" == "ETHERMINE" ]; then
 	EXPIRED_ETHERMINE_PAYOUTS_SQL="DELETE FROM ethermine_payouts WHERE UNIX_TIMESTAMP(paidon) < ${EXPIRED_DATA};"
 	echo "SQL TO REMOVE EXPIRED ETHERMINE PAYOUTS DATA: $EXPIRED_ETHERMINE_PAYOUTS_SQL"
 	echo $EXPIRED_ETHERMINE_PAYOUTS_SQL | mysql -v -v -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata
+fi
 
 #archive old status and info files
 while (( LAST_CLEANUP < TIME )); do

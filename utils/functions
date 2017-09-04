@@ -1,10 +1,11 @@
 bookkeeping () {
+	RESET_DATE=`date --date="-1 month" +%s`
         if [ ! -f ${RECORD_LOG} ]; then
                 touch ${RECORD_LOG}
-                echo "LAST_INGESTED_CLAYMORE_STATUS=0" >> ${RECORD_LOG}
-                echo "LAST_INGESTED_ETHERMINE_PAYOUTS=0" >> ${RECORD_LOG}
-                echo "LAST_INGESTED_ETHERMINE_STATS=0" >> ${RECORD_LOG}
-                echo "LAST_CLEANUP=0" >> ${RECORD_LOG}
+                echo "LAST_INGESTED_CLAYMORE_STATUS=RESET_DATE" >> ${RECORD_LOG}
+                echo "LAST_INGESTED_ETHERMINE_PAYOUTS=RESET_DATE" >> ${RECORD_LOG}
+                echo "LAST_INGESTED_ETHERMINE_STATS=RESET_DATE" >> ${RECORD_LOG}
+                echo "LAST_CLEANUP=RESET_DATE" >> ${RECORD_LOG}
         fi      
         
         # read to associative array
