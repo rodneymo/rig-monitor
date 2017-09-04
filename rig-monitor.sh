@@ -21,12 +21,13 @@ fi
 
 SAVEIFS=$IFS
 
+# Collect rig data from claymore and smart plug (if enabled)
 for RIG_LINE in "${RIG_LIST[@]}"
 do
 	#echo $RIG_LINE
 	
 	IFS=$',' read RIG_NAME RIG_IP PLUG_IP NUM_GPUS TARGET_HASHRATE TARGET_TEMP TARGET_POWER <<<${RIG_LINE}
-	#echo $RIG_IP
+	echo "collecting data from $RIG_NAME..."
 	
 	# load and capture claymore's http status page 
 	CLAYMORE_READOUT=`timeout 5s w3m -dump -cols 1000 http://${RIG_IP}:3333 | awk -vRS= 'END{print}'`
@@ -40,32 +41,28 @@ do
 	fi
 	#echo $RIG_NAME, $POWER_USAGE
 
+	# filter rig,gpu records and dump them into data file
 	awk -f ${BASE_DIR}/awk/filter_claymore_miner_stats.awk -v time=${TIME} rig_name=${RIG_NAME} power_usage=${POWER_USAGE} <<< "$CLAYMORE_READOUT" >> ${DATA_DIR}/${STATUS_DATA_FILE}
 
 done 
 
-#################
-fi
-
 if [ -f ${DATA_DIR}/${STATUS_DATA_FILE} ]; then
 
         echo "ingesting claymore status data..."
-        LAST_RECORD=$(bookkeeping "LAST_INGESTED_CLAYMORE_STATUS")
+        LAST_INGESTED_RECORD=$(bookkeeping "LAST_INGESTED_CLAYMORE_STATUS")
         echo "last ingested status record: $LAST_RECORD"
 
 	# filter out old records
 	awk -f ${BASE_DIR}/utils/filter_status_records.awk -v last_record=$LAST_INGESTED_RECORD record_type=RIG ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/rig_status.tmp
 	awk -f ${BASE_DIR}/utils/filter_status_records.awk -v last_record=$LAST_INGESTED_RECORD record_type=GPU ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/gpu_status.tmp
+
 	# INSERT STATUS DATA INTO DB	
 	mysql -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_status_data.sql
 
-	LAST_INGESTED_RECORD=`tail -1 ${DATA_DIR}/${STATUS_DATA_FILE} | cut -d',' -f 2`
-	echo $LAST_INGESTED_RECORD > ${BASE_DIR}/run/INGEST_BOOKEEPER.log
-
 	# update bookkeeping file
-	LAST_RECORD=`tail -1 ${DATA_DIR}/${STATUS_DATA_FILE} | cut -d',' -f 2`
-	$(bookkeeping "LAST_INGESTED_CLAYMORE_STATUS" ${LAST__RECORD})
-	echo "updating last ingested claymore status record to: $LAST_RECORD"
+	LAST_INGESTED_RECORD=`tail -1 ${DATA_DIR}/${STATUS_DATA_FILE} | cut -d',' -f 2`
+	$(bookkeeping "LAST_INGESTED_CLAYMORE_STATUS" ${LAST_INGESTED_RECORD})
+	echo "updating last ingested claymore status record to: $LAST_INGESTED_RECORD"
 fi
 
 IFS=$SAVEIFS
