@@ -47,29 +47,52 @@ CREATE TABLE IF NOT EXISTS rigdata.status_gpu(
 );
 
 CREATE TABLE IF NOT EXISTS rigdata.ethermine_stats(
-        time DATETIME,
+        time DATETIME,				-- time from json file
+        label VARCHAR(100) NOT NULL,
         lastseen DATETIME,
-        reportedHashrate FLOAT(9,3),
-        currentHashrate FLOAT(9,3),
+        reportedHashrate FLOAT(20,3),
+        currentHashrate FLOAT(20,3),
         valid_shares INT,
         invalid_shares INT,
         stale_shares INT,
-        averageHashrate FLOAT(9,3),
+        averageHashrate FLOAT(20,3),
         activeWorkers INT,
         unpaid FLOAT(18,16),
         unconfirmed FLOAT(18,16),
         coinsPerMin FLOAT(18,16),
         usdPerMin FLOAT(18,16),
         btcPerMin FLOAT(20,18),
-        PRIMARY KEY(time)
-
+        PRIMARY KEY(time,label)
 );
 
 CREATE TABLE IF NOT EXISTS rigdata.ethermine_payouts(
-        paidon DATETIME,
+        paidon DATETIME,			-- one entry per payment
+        label VARCHAR(100) NOT NULL,
         start VARCHAR(12) NOT NULL,
         end VARCHAR(12) NOT NULL,
-	amount FLOAT(18,16),
+        amount FLOAT(18,16),
         txHash VARCHAR(100) NOT NULL,
-        PRIMARY KEY(paidon)
+        PRIMARY KEY(paidon,label)
 );
+
+CREATE TABLE IF NOT EXISTS rigdata.mpos_stats(
+	time DATETIME,					-- runtime, execution date/time in system
+	label VARCHAR(100) NOT NULL,
+	currentHashrate FLOAT(20,3),
+	poolHashrate FLOAT(20,3),
+	networkHashrate FLOAT(20,3),
+	valid_shares FLOAT(20,11),
+	invalid_shares FLOAT(20,11),
+	unpaid_shares FLOAT(20,11),
+	balance_confirmed FLOAT(20,11),
+	balance_unconfirmed FLOAT(20,11),
+	PRIMARY KEY(time,label)
+);
+
+CREATE TABLE IF NOT EXISTS rigdata.mpos_payouts(
+	label VARCHAR(100) NOT NULL,
+	date DATETIME,						-- this is the unpaid amount, which will increase throughout the day
+	amount FLOAT(20,11),
+	PRIMARY KEY(date,label)
+);
+
