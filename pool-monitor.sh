@@ -62,10 +62,27 @@ do
 			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL --arg RUN_TIME $RUN_TIME -r '. | .+ {"label": $LABEL, "report": "getdashboarddata_stats", "run_time": $RUN_TIME} | [.label,.report,.run_time,.raw.personal.hashrate,.raw.pool.hashrate,.raw.network.hashrate,.personal.shares.valid,.personal.shares.invalid,.personal.shares.unpaid,.balance.confirmed,.balance.unconfirmed] | @csv' |sed 's/\"//g' >>  ${DATA_DIR}/$POOL_DATA_FILE
 			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL -r '.recent_credits[] | .+ {"label": $LABEL, "report": "getdashboarddata_payouts"} | [.label,.report,.date,.amount] | @csv' |sed 's/\"//g'>> ${DATA_DIR}/$POOL_DATA_FILE
 		fi
+
+	elif [ "$POOL_TYPE" == "NANOPOOL" ]; then
+
+		GENERALINFO_URL="${BASE_API_URL}/v1/sia/user/${WALLET_ADDR}"
+		echo $GENERALINFO_URL
+		CURL_OUTPUT=`curl -s "${GENERALINFO_URL}" | jq -r '.'`
+		CURL_STATUS=`echo $CURL_OUTPUT | jq -r '.status'`
+		#echo $CURL_STATUS 
+		if [ "$CURL_STATUS" == "false" ]; then
+			echo "NO DATA FOUND"
+		else
+			CURL_OUTPUT=`echo $CURL_OUTPUT | jq -r '.data'`
+			echo $CURL_OUTPUT
+			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL --arg RUN_TIME $RUN_TIME -r '. | .+ {"label": $LABEL, "report": "getdashboarddata_stats", "run_time": $RUN_TIME} | [.label,.report,.run_time,.raw.personal.hashrate,.raw.pool.hashrate,.raw.network.hashrate,.personal.shares.valid,.personal.shares.invalid,.personal.shares.unpaid,.balance.confirmed,.balance.unconfirmed] | @csv' |sed 's/\"//g' >>  ${DATA_DIR}/$POOL_DATA_FILE
+		fi
 	fi
 done
 
-# INGEST POOL DATA
+exit
+
+INGEST POOL DATA
 if [ -f ${DATA_DIR}/${POOL_DATA_FILE} ] ; then
 
 	echo "ingesting pool data..."
@@ -96,6 +113,12 @@ if [ -f ${DATA_DIR}/${POOL_DATA_FILE} ] ; then
        			awk -f ${BASE_DIR}/awk/filter_pool_records_by_tag.awk -v label=$LABEL report=getdashboarddata_payouts last_record=$LAST_RECORD ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_getdashboarddata_payouts.tmp
 
 			mysql -vvv -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_mpos_data.sql
+
+		elif [ "$POOL_TYPE" == "NANOPOOL" ]; then
+			# filter out records using report and LAST_RECORD as filters
+       			awk -f ${BASE_DIR}/awk/filter_pool_records_by_tag.awk -v label=$LABEL report=generalinfo last_record=$LAST_RECORD ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_getdashboarddata_stats.tmp
+
+			mysql -vvv -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_nanopool_data.sql
 
 		fi
 
