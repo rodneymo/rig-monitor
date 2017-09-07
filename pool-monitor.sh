@@ -56,7 +56,7 @@ do
 		echo $DASHBOARD_URL
 		CURL_OUTPUT=`curl -s "${DASHBOARD_URL}" | jq -r '.getdashboarddata.data'`
 		#echo $CURL_OUTPUT 
-		if [ "$CURL_OUTPUT" == "NO DATA" ]; then
+		if [ "$CURL_OUTPUT" == "NO DATA" ] || [ "$CURL_OUTPUT" == "" ]; then
 			echo "NO DATA FOUND"
 		else
 			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL --arg RUN_TIME $RUN_TIME -r '. | .+ {"label": $LABEL, "report": "getdashboarddata_stats", "run_time": $RUN_TIME} | [.label,.report,.run_time,.raw.personal.hashrate,.raw.pool.hashrate,.raw.network.hashrate,.personal.shares.valid,.personal.shares.invalid,.personal.shares.unpaid,.balance.confirmed,.balance.unconfirmed] | @csv' |sed 's/\"//g' >>  ${DATA_DIR}/$POOL_DATA_FILE
