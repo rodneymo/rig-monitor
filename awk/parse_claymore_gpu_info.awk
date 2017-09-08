@@ -1,3 +1,5 @@
+# USED BY update-rig-info.sh
+
 BEGIN {
 	FS = "[ ,:()]"
 	GPU_INDEX=0

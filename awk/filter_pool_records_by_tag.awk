@@ -1,3 +1,4 @@
+#USED by pool-monitor.sh
 BEGIN {
 	FS="[,]"
 }
