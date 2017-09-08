@@ -2,8 +2,8 @@
 BEGIN {
 	FS="[,]"
 }
-$1 ~ label && $2 ~ report {
-	if ( $3 > last_record ) {
+$2 ~ label && $3 ~ report {
+	if ( $1 > last_record ) {
 		print $0
 	 }
 }

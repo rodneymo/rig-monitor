@@ -1,6 +1,7 @@
 BEGIN {
 	FS = "[ ,:]"
 	GPU_INDEX=0
+	TRACE=0
 }
 
 # IGNORE LINES WITH SHARE FOUND MESSAGE
@@ -87,8 +88,8 @@ BEGIN {
         dag_size=$12
         sub(/\([0-9A-Z\.]+\)/,"",dag)
         gsub(/^[0-9]+\(|\)/,"",dag_size)
-	print dag
-	print dag_size
+	#print dag
+	#print dag_size
 	}
 
 # READ FAN SPEED and TEMP FROM GPUS E.G. 
@@ -111,6 +112,8 @@ END {
         for ( gpu_id = 0; gpu_id < GPU_INDEX; gpu_id++ ) {
                 print "GPU," time "," rig_name "/" gpu_id "," gpu[gpu_id,"HASHRATE_ETH"] "," gpu[gpu_id,"SHARES_ETH"] "," gpu[gpu_id,"INC_SHARES_ETH"] "," gpu[gpu_id,"HASHRATE_DCOIN"] "," gpu[gpu_id,"SHARES_DCOIN"] ","  gpu[gpu_id,"INC_SHARES_DCOIN"] "," gpu[gpu_id,"TEMP"] "," gpu[gpu_id,"FAN"]
         }
+	
+	if (TRACE != 0) { 
 	print "SYSTEM NAME: " rig_name
 	print "\tETH CURRENT HASHRATE: " current_hashrate_eth
 	print "\tETH AVERAGE HASHRATE ETH: " average_hashrate_eth
@@ -134,6 +137,7 @@ END {
 		print "\tDCR/SC/LBC/PASC INCORRECT SHARES: " gpu[i,"INC_SHARES_DCOIN"]
 		print "\tTEMP.(C): " gpu[i,"TEMP"]
 		print "\tFAN SPEED: " gpu[i,"FAN"]
+	}
 	}
 }
 

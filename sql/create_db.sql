@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS rigdata.ethermine_stats(
         usdPerMin FLOAT(18,16),
         btcPerMin FLOAT(20,18),
         PRIMARY KEY(time,label)
+
 );
 
 CREATE TABLE IF NOT EXISTS rigdata.ethermine_payouts(
@@ -100,9 +101,32 @@ CREATE TABLE IF NOT EXISTS rigdata.mpos_stats(
 );
 
 CREATE TABLE IF NOT EXISTS rigdata.mpos_payouts(
-	label VARCHAR(100) NOT NULL,
 	date DATETIME,						-- this is the unpaid amount, which will increase throughout the day
+	label VARCHAR(100) NOT NULL,
 	amount FLOAT(20,11),
+	PRIMARY KEY(date,label)
+);
+
+CREATE TABLE IF NOT EXISTS rigdata.nanopool_generalinfo(
+	time DATETIME,					-- runtime, execution date/time in system
+	label VARCHAR(100) NOT NULL,
+	currentHashrate FLOAT(20,3),
+	avgHashrate_h1 FLOAT(20,3),
+	avgHashrate_h3 FLOAT(20,3),
+	avgHashrate_h6 FLOAT(20,3),
+	avgHashrate_h12 FLOAT(20,3),
+	avgHashrate_h24 FLOAT(20,3),
+	balance FLOAT(20,11),
+	unconfirmed_balance FLOAT(20,11),
+	PRIMARY KEY(time,label)
+);
+
+CREATE TABLE IF NOT EXISTS rigdata.nanopool_payouts(
+	date DATETIME,						-- this is the unpaid amount, which will increase throughout the day
+	label VARCHAR(100) NOT NULL,
+	txHash VARCHAR(100) NOT NULL,
+	amount FLOAT(20,11),
+	confirmed VARCHAR(10) NOT NULL,
 	PRIMARY KEY(date,label)
 );
 
