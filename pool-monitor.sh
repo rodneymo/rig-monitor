@@ -33,7 +33,7 @@ do
 		STATS_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/currentStats"
 		echo "curl \"$STATS_URL\""
 		CURL_OUTPUT=`curl -s "${STATS_URL}" | jq -r '.data'`
-		#echo $CURL_OUTPUT
+		# echo $CURL_OUTPUT | jq -r '.'
 		if [ "$CURL_OUTPUT" == "NO DATA" ]; then
 			echo "NO DATA FOUND"
 		else
