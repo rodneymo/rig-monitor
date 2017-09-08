@@ -4,6 +4,7 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $BASE_DIR
 
 . ${BASE_DIR}/conf/rig-monitor.conf
+. ${BASE_DIR}/lib/functions
 
 # epoch TIME
 TIME=`date +%s`
@@ -53,8 +54,8 @@ if [ -f ${DATA_DIR}/${STATUS_DATA_FILE} ]; then
         echo "last ingested status record: $LAST_RECORD"
 
 	# filter out old records
-	awk -f ${BASE_DIR}/utils/filter_claymore_records_by_time_tag.awk -v last_record=$LAST_INGESTED_RECORD record_type=RIG ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/rig_status.tmp
-	awk -f ${BASE_DIR}/utils/filter_claymore_records_by_time_tag.awk -v last_record=$LAST_INGESTED_RECORD record_type=GPU ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/gpu_status.tmp
+	awk -f ${BASE_DIR}/awk/filter_claymore_records_by_time_tag.awk -v last_record=$LAST_INGESTED_RECORD record_type=RIG ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/rig_status.tmp
+	awk -f ${BASE_DIR}/awk/filter_claymore_records_by_time_tag.awk -v last_record=$LAST_INGESTED_RECORD record_type=GPU ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/gpu_status.tmp
 
 	# INSERT STATUS DATA INTO DB	
 	mysql -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_status_data.sql

@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS rigdata.info_rig(
 	plug_ip  VARCHAR(20) NOT NULL,
 	installed_gpus INT NOT NULL,
 	target_hashrate FLOAT(7,3) NOT NULL,
-	target_hashrate_2 FLOAT(7,3) NOT NULL,
+	target_hashrate_dcoin FLOAT(7,3) NOT NULL,
 	target_temp INT NOT NULL,
 	max_power INT NOT NULL
    );
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS rigdata.status_rig(
 	current_hashrate_eth FLOAT(7,3),
 	average_hashrate_eth FLOAT(7,3),
 	total_shares_eth INT,
-	total_rej_shares INT,
+	total_rej_shares_eth INT,
 	current_hashrate_dcoin FLOAT(7,3),
 	average_hashrate_dcoin FLOAT(7,3),
 	total_shares_dcoin INT,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS rigdata.status_gpu(
 	rig_gpu_id VARCHAR(12) NOT NULL,
 	gpu_hashrate_eth FLOAT(7,3) NOT NULL,
 	gpu_shares_eth INT NOT NULL,
-	gpu_inc_shares_inc INT,
+	gpu_inc_shares_eth INT,
 	gpu_hashrate_dcoin FLOAT(7,3) NOT NULL,
 	gpu_shares_dcoin INT NOT NULL,
 	gpu_inc_shares_dcoin INT,
