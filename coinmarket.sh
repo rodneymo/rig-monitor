@@ -44,45 +44,32 @@ do
 		PRICE="price_${QUOTE_CURRENCY,,}"
 		VOLUME="24h_volume_${QUOTE_CURRENCY,,}"
 		MARKET="market_cap_${QUOTE_CURRENCY,,}"
-		echo $CURL_OUTPUT | jq -r --arg price $PRICE --arg volume $VOLUME --arg market $MARKET --arg currency $QUOTE_CURRENCY '.[] | [.symbol,.name,.price_btc,$currency,.[$price],.[$volume],.[$market]] | @csv'
+		echo $CURL_OUTPUT | jq -r --arg price $PRICE --arg volume $VOLUME --arg market $MARKET --arg currency $QUOTE_CURRENCY '.[] | [.last_updated,.symbol,.name,.price_btc,$currency,.[$price],.[$volume],.[$market]] | @csv' |sed 's/\"//g' >> ${DATA_DIR}/${MARKET_DATA_FILE}
 	fi
 done
 
-rm ${BASE_DIR}/run/COINMARKET_LOCK 
-exit
+#INGEST COINMARKET  DATA
+if [ -f ${DATA_DIR}/${MARKET_DATA_FILE} ] ; then
 
-#INGEST POOL DATA
-if [ -f ${DATA_DIR}/${POOL_DATA_FILE} ] ; then
-
-	echo "ingesting pool data..."
+	echo "ingesting coinmarket data..."
 
 	# sort and remove duplicate entries in DATA file
-	sort --field-separator=',' ${DATA_DIR}/${POOL_DATA_FILE} | uniq > ${DATA_DIR}/${POOL_DATA_FILE}.tmp
-	mv ${DATA_DIR}/${POOL_DATA_FILE}.tmp ${DATA_DIR}/${POOL_DATA_FILE}
+	sort --field-separator=',' ${DATA_DIR}/${MARKET_DATA_FILE} | uniq > ${DATA_DIR}/${MARKET_DATA_FILE}.tmp
+	mv ${DATA_DIR}/${MARKET_DATA_FILE}.tmp ${DATA_DIR}/${MARKET_DATA_FILE}
 
-	for POOL_LINE in "${POOL_LIST[@]}"; do
-		IFS=$',' read POOL_TYPE LABEL BASE_API_URL API_TOKEN WALLET_ADDR <<<${POOL_LINE}
+	BOOKKEEPING_RECORD_NAME="COINMARKET_LAST_RECORD"
 
-		BOOKKEEPING_RECORD_NAME="${LABEL}_POOL_LAST_RECORD"
+	LAST_RECORD=$(bookkeeping $BOOKKEEPING_RECORD_NAME)
+	echo "last ingested coinmarket data: $LAST_RECORD"
 
-		LAST_RECORD=$(bookkeeping $BOOKKEEPING_RECORD_NAME)
-		echo "last ingested $LABEL pool stats: $LAST_RECORD"
+	# filter out old records using LABEL and LAST_RECORD as filters
+       	awk -f ${BASE_DIR}/awk/filter_old_coinmarket_records.awk -v last_record=$LAST_RECORD ${DATA_DIR}/${MARKET_DATA_FILE} > ${TMP_DIR}/coinmarket.tmp
 
-		if [ "$POOL_TYPE" == "ETHERMINE" ]; then
-			# filter out old records using LABEL and LAST_RECORD as filters
-       			awk -f ${BASE_DIR}/awk/filter_pool_records_by_tag.awk -v label=$LABEL report=currentStats last_record=$LAST_RECORD ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_ethermine_stats.tmp
-       			awk -f ${BASE_DIR}/awk/filter_pool_records_by_tag.awk -v label=$LABEL report=payouts last_record=$LAST_RECORD ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_ethermine_payouts.tmp
+	mysql -vvv -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_coinmarket_data.sql
 
-			mysql -vvv -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_ethermine_data.sql
-		fi
-
-		# update bookkeeping file
-		$(bookkeeping $BOOKKEEPING_RECORD_NAME $RUN_TIME)
-		echo "updating last ingested $LABEL pool stats to: $RUN_TIME"
-	done
-
-
-
+	# update bookkeeping file
+	$(bookkeeping $BOOKKEEPING_RECORD_NAME $RUN_TIME)
+	echo "updating last ingested $LABEL pool stats to: $RUN_TIME"
 
 fi
 

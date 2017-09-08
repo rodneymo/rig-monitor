@@ -106,3 +106,15 @@ CREATE TABLE IF NOT EXISTS rigdata.mpos_payouts(
 	PRIMARY KEY(date,label)
 );
 
+CREATE TABLE IF NOT EXISTS rigdata.coinmarket(
+	time DATETIME,
+	symbol VARCHAR(10) NOT NULL,
+	name VARCHAR(100) NOT NULL,
+	price_btc FLOAT(20,11),
+	quote_currency VARCHAR(10) NOT NULL,
+	price_quote_currency FLOAT(20,11),
+	volume_quote_currency FLOAT(20,3),
+	marketcap_quote_currency FLOAT(20,3),
+	PRIMARY KEY(time,symbol)
+);
+
