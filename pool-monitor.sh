@@ -47,7 +47,7 @@ do
 		if [ "$CURL_OUTPUT" == "" ]; then
 			echo "NO DATA FOUND"
 		else
-			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL -r '. | .+ {"label": $LABEL, "report": "payouts"} | [.paidOn,.label,.report,.start,.end,.amount,.txHash] | @csv' |sed 's/\"//g' >> ${DATA_DIR}/$POOL_DATA_FILE
+			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL --arg RUN_TIME $RUN_TIME -r '. | .+ {"label": $LABEL, "report": "payouts", "run_time": $RUN_TIME} | [.run_time,.paidOn,.label,.report,.start,.end,.amount,.txHash] | @csv' |sed 's/\"//g' >> ${DATA_DIR}/$POOL_DATA_FILE
 		fi
 
 	elif [ "$POOL_TYPE" == "MPOS" ]; then
@@ -87,7 +87,7 @@ do
 		if [ "$CURL_STATUS" == "" ]; then
 			echo "NO DATA FOUND"
 		else
-			echo $CURL_OUTPUT | jq --arg LABEL $LABEL -r '.data[] | .+ {"label": $LABEL, "report": "payments"} | [.date,.label,.report,.txHash,.amount,.confirmed] | @csv' |sed 's/\"//g' >>  ${DATA_DIR}/$POOL_DATA_FILE
+			echo $CURL_OUTPUT | jq --arg LABEL $LABEL --arg RUN_TIME $RUN_TIME -r '.data[] | .+ {"label": $LABEL, "report": "payments", "run_time": $RUN_TIME} | [.run_time,.date,.label,.report,.txHash,.amount,.confirmed] | @csv' |sed 's/\"//g' >>  ${DATA_DIR}/$POOL_DATA_FILE
 		fi
 
 	fi

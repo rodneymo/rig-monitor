@@ -11,5 +11,5 @@ REPLACE
 INTO TABLE rigdata.mpos_payouts
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
-(@_date,label,@empty,amount) SET date = FROM_UNIXTIME(UNIX_TIMESTAMP(CONCAT(@_date," 0:0:0")));
+(@_time,@_date,label,@empty,amount) SET time = FROM_UNIXTIME(@_time), date = FROM_UNIXTIME(UNIX_TIMESTAMP(CONCAT(@_date," 0:0:0")));
 

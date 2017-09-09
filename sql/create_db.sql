@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS rigdata.ethermine_stats(
 );
 
 CREATE TABLE IF NOT EXISTS rigdata.ethermine_payouts(
+	time DATETIME,					-- runtime, execution date/time in system
         paidon DATETIME,			-- one entry per payment
         label VARCHAR(100) NOT NULL,
         start VARCHAR(12) NOT NULL,
@@ -101,6 +102,7 @@ CREATE TABLE IF NOT EXISTS rigdata.mpos_stats(
 );
 
 CREATE TABLE IF NOT EXISTS rigdata.mpos_payouts(
+	time DATETIME,					-- runtime, execution date/time in system
 	date DATETIME,						-- this is the unpaid amount, which will increase throughout the day
 	label VARCHAR(100) NOT NULL,
 	amount FLOAT(20,11),
@@ -122,6 +124,7 @@ CREATE TABLE IF NOT EXISTS rigdata.nanopool_generalinfo(
 );
 
 CREATE TABLE IF NOT EXISTS rigdata.nanopool_payouts(
+	time DATETIME,					-- runtime, execution date/time in system
 	date DATETIME,						-- this is the unpaid amount, which will increase throughout the day
 	label VARCHAR(100) NOT NULL,
 	txHash VARCHAR(100) NOT NULL,
