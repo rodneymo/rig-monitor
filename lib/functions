@@ -12,6 +12,7 @@ bookkeeping () {
 	# create entry in bookkeeping log if record does not exist
 	if [[ !${records[$1]} ]];then
 		echo $1=$RESET_DATE >> ${RECORD_LOG}
+		records[$1]=$RESET_DATE
 	fi
         
         if [ "$#" -eq 1 ];then
