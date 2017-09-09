@@ -10,5 +10,5 @@ REPLACE
 INTO TABLE rigdata.ethermine_payouts
 FIELDS TERMINATED BY ',' 
 LINES TERMINATED BY '\n'
-(@_time,@_paidon,label,@empty,start,end,@_amount,txHash) SET time = FROM_UNIXTIME(@_time), paidon = FROM_UNIXTIME(@_paidon), amount = @_amount/1E18;
+(@_paidon,label,@empty,start,end,@_amount,txHash) SET paidon = FROM_UNIXTIME(@_paidon), amount = @_amount/1E18;
 

@@ -26,7 +26,7 @@ echo "Data rentetion policy:" $DATA_RETENTION " DAYS"
 echo "Today's date:" `date -d @${TIME}` ", ${TIME} (EPOCH)"}
 echo "Expired data older than:" `date -d @${EXPIRED_DATA}` ", ${EXPIRED_DATA} (EPOCH)"
 
-DB_TABLES=`awk 'BEGIN {FS = "[ .(]"}; /CREATE TABLE/ { print $7 }' sql/create_db.sql | grep -v -e "info_*" -e "status_*" `
+DB_TABLES=`awk 'BEGIN {FS = "[ .(]"}; /CREATE TABLE/ { print $7 }' sql/create_db.sql | grep -v -e "info_" -e "_pay" `
 
 for TABLE in $DB_TABLES; do
 
@@ -44,13 +44,13 @@ while (( LAST_RECORD < TIME )); do
 		_LAST_RECORD=`date -d @${LAST_RECORD} +%d-%m-%Y`
 	fi
 	
-	echo "older files up to ${_LAST_RECORD} will be archived"
+	echo -n "Older files up to ${_LAST_RECORD} will be archived..."
 
 	if ls ${DATA_DIR}/*${_LAST_RECORD}.csv 1> /dev/null 2>&1; then
-		#tar --remove-files -czvf ${DATA_BKUP}/data_files_${_LAST_RECORD}.tar.gz ${DATA_DIR}/*${_LAST_RECORD}.csv
+		tar --remove-files -czvf ${DATA_BKUP}/data_files_${_LAST_RECORD}.tar.gz ${DATA_DIR}/*${_LAST_RECORD}.csv
 		echo "Files archived and removed!"
 	else
-		echo "Files not found!"
+		echo "No files found!"
 	fi
 
 	LAST_RECORD=$(( LAST_RECORD + ( 24 * 60 * 60 ) ))

@@ -1,11 +1,9 @@
-#USED by pool-monitor.sh
+#USED by pool-monitor.sh to fileter payout records
 BEGIN {
 	FS="[,]"
 }
 $2 ~ label && $3 ~ report {
-	if ( $1 > last_record ) {
-		print $0
-	 }
+	print $0
 }
 
 

@@ -10,5 +10,5 @@ REPLACE
 INTO TABLE rigdata.nanopool_payouts
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
-(@_time,@_date,label,@empty,txHash,amount,confirmed) SET time = FROM_UNIXTIME(@_time), date = FROM_UNIXTIME(@_date);
+(@_date,label,@empty,amount,txHash,confirmed) SET date = FROM_UNIXTIME(@_date);
 

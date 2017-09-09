@@ -51,14 +51,14 @@ if [ -f ${DATA_DIR}/${STATUS_DATA_FILE} ]; then
 
         echo "ingesting claymore status data..."
         LAST_INGESTED_RECORD=$(bookkeeping "LAST_INGESTED_CLAYMORE_STATUS")
-        echo "last ingested status record: $LAST_RECORD"
+        echo "last ingested status record: $LAST_INGESTED_RECORD"
 
 	# filter out old records
 	awk -f ${BASE_DIR}/awk/filter_claymore_records_by_time_tag.awk -v last_record=$LAST_INGESTED_RECORD record_type=RIG ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/rig_status.tmp
 	awk -f ${BASE_DIR}/awk/filter_claymore_records_by_time_tag.awk -v last_record=$LAST_INGESTED_RECORD record_type=GPU ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/gpu_status.tmp
 
 	# INSERT STATUS DATA INTO DB	
-	mysql -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_status_data.sql
+	mysql -vvv --show-warnings -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_status_data.sql
 
 	# update bookkeeping file
 	LAST_INGESTED_RECORD=`tail -1 ${DATA_DIR}/${STATUS_DATA_FILE} | cut -d',' -f 2`

@@ -65,11 +65,11 @@ if [ -f ${DATA_DIR}/${MARKET_DATA_FILE} ] ; then
 	# filter out old records using LABEL and LAST_RECORD as filters
        	awk -f ${BASE_DIR}/awk/filter_old_coinmarket_records.awk -v last_record=$LAST_RECORD ${DATA_DIR}/${MARKET_DATA_FILE} > ${TMP_DIR}/coinmarket.tmp
 
-	mysql -vvv -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_coinmarket_data.sql
+	mysql -vvv --show-warnings -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_coinmarket_data.sql
 
 	# update bookkeeping file
 	$(bookkeeping $BOOKKEEPING_RECORD_NAME $RUN_TIME)
-	echo "updating last ingested $LABEL pool stats to: $RUN_TIME"
+	echo "updating last ingested market data to: $RUN_TIME"
 
 fi
 
