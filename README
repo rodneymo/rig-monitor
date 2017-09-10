@@ -6,23 +6,26 @@ I am using a raspberry pi (version 1) as managment server because of the small f
 Currently these scripts ONLY support Claymore's miner. Support for other miners will eventually come later. All my rigs run Windows, but, assuming claymore's linux version produces the same http output format as the Windows this should work as well on rigs running linux (and Claymore's). If it doesn't and you need it then please create an issue and attach the plaintext output claymore's remote management port.
 
 I am also using TP Link HS110 smart plugs (this option can be disabled in the config file). These plugs are great and I use them monitor the power usage and remotely reboot rigs in case of boot issues). Beware that, if you want to monitor power consumption you'll need the HS110s. The HS100 do not support  power monitoring.
-FEATURES
 
-Metrics and KPIs available
-Installed/online GPUs per rig
-Total hashrate per farm, rig and GPU
-Power usage per farm and mining rig*
-Mining time per rig
-Temperature and fan speed per rig and GPU
-Total number of shares per rig and per GPU
-Incorrect number of shares per GPU
-Pre-canned dashboards (see screenshots below)
-Overview
-GPU detail
-Share detail
-Hashrate detail
-Power usage detail
-Alerts to cell phone via telegram mobile app
+FEATURE LIST
+
+Support for claymore single and dual mining mode
+Support for multiple pools/wallets monitoring via pool APIs
+Integration with ethermine pool (currentStats, payouts) API
+Integration with MPOS-based pools (e.g. miningpoolhib) pool (getdashboarddata) API
+Integration with nanopool API (generalinfo, payments). Supports all crypto pools (ETH, ETC, SIA, PASC, XMR and ZEC)
+Integration with coinmarketcap API for monitoring crypo prices in different quote currencies, trading volume and market cap. Supports conversion to different quote currencies.
+Integration with telegram for mobile/web notification
+Includes template dashboards:
+- Mining overview
+- Hashrate Details
+- Share Details
+- GPU details
+- Power Consumption Details
+- Ethermine pool
+- Nanopool
+- MUSICOION (mininghubpool)
+Automatically clean up of old data
 
 For full installation instructions please see here: http://randomcryptostuff.blogspot.nl/2017/08/monitoring-ethereum-mining-farm-using.html
 
