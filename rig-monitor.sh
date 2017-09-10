@@ -16,23 +16,40 @@ else
 	touch  ${BASE_DIR}/run/RIG_LOCK
 fi
 
-if [ "$1" == "-trace" ];then
-	set -x
-fi
+for ARGUMENT in "$@"; do
+	if [ "$ARGUMENT" == "-trace" ]; then
+		set -x
+	elif [[ $ARGUMENT =~ ^-r[0-9]+ ]]; then
+		DEBUG=1
+		MYSQL_VERBOSE=" -vvv --show-warnings " 
+		L_INDEX=${ARGUMENT:2}
+		RIG_LIST=("${RIG_LIST[@]:$L_INDEX:1}")
+	else
+		echo "Argument unknonw: ${ARGUMENT}"
+		rm ${BASE_DIR}/run/RIG_LOCK 
+		exit
+	fi
+done
 
 SAVEIFS=$IFS
 
 # Collect rig data from claymore and smart plug (if enabled)
 for RIG_LINE in "${RIG_LIST[@]}"
 do
-	#echo $RIG_LINE
+	if (( DEBUG == 1 )); then
+		echo $RIG_LINE
+	fi
+
 	
 	IFS=$',' read RIG_NAME RIG_IP PLUG_IP NUM_GPUS TARGET_HASHRATE TARGET_TEMP TARGET_POWER <<<${RIG_LINE}
 	echo "collecting data from $RIG_NAME..."
 	
 	# load and capture claymore's http status page 
 	CLAYMORE_READOUT=`timeout 5s w3m -dump -cols 1000 http://${RIG_IP}:3333 | awk -vRS= 'END{print}'`
-	#echo "$TIME $CLAYMORE_READOUT"
+	if (( DEBUG == 1 )); then
+		echo "$TIME $CLAYMORE_READOUT"
+	fi
+
 
 	if [ "$SMART_PLUGS" == "1" ];then
 		# read power usage from smart plug
@@ -40,7 +57,10 @@ do
 	else
 		POWER_USAGE=0
 	fi
-	#echo $RIG_NAME, $POWER_USAGE
+	if (( DEBUG == 1 )); then
+		echo $RIG_NAME, $POWER_USAGE
+	fi
+
 
 	# filter rig,gpu records and dump them into data file
 	awk -f ${BASE_DIR}/awk/parse_claymore_status.awk -v time=${TIME} rig_name=${RIG_NAME} power_usage=${POWER_USAGE} <<< "$CLAYMORE_READOUT" >> ${DATA_DIR}/${STATUS_DATA_FILE}
@@ -58,7 +78,7 @@ if [ -f ${DATA_DIR}/${STATUS_DATA_FILE} ]; then
 	awk -f ${BASE_DIR}/awk/filter_claymore_records_by_time_tag.awk -v last_record=$LAST_INGESTED_RECORD record_type=GPU ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/gpu_status.tmp
 
 	# INSERT STATUS DATA INTO DB	
-	mysql -vvv --show-warnings -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_status_data.sql
+	mysql $MYSQL_VERBOSE -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_status_data.sql
 
 	# update bookkeeping file
 	LAST_INGESTED_RECORD=`tail -1 ${DATA_DIR}/${STATUS_DATA_FILE} | cut -d',' -f 2`
