@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS rigdata.ethermine_payouts(
         end VARCHAR(12) NOT NULL,
         PRIMARY KEY(paidon,label)
 );
+ALTER TABLE rigdata.ethermine_payouts CHANGE paidon date DATETIME; 
 
 CREATE TABLE IF NOT EXISTS rigdata.mpos_stats(
 	time DATETIME,					-- runtime, execution date/time in system

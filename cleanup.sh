@@ -11,6 +11,7 @@ _TIME=`date +%s`
 TIME=$(( ${_TIME} - (${_TIME} % (24 * 60 * 60)) ))
 
 EXPIRED_DATA=$(($TIME - ($DATA_RETENTION * 24 * 60 * 60)))
+EXPIRED_PAYOUT_DATA=$(($TIME - ($PAYOUT_DATA_RETENTION * 24 * 60 * 60)))
 
 if [ -f ${BASE_DIR}/run/CLEANUP_LOCK ]; then
     	echo "DB clean up process already running! Exiting..."
@@ -22,16 +23,28 @@ else
 	echo "Last cleanup:" `date -d @${LAST_RECORD}` ", ${LAST_RECORD} (EPOCH)"
 fi
 
-echo "Data rentetion policy:" $DATA_RETENTION " DAYS"
 echo "Today's date:" `date -d @${TIME}` ", ${TIME} (EPOCH)"}
+
+echo "Data rentetion policy:" $DATA_RETENTION " DAYS"
 echo "Expired data older than:" `date -d @${EXPIRED_DATA}` ", ${EXPIRED_DATA} (EPOCH)"
 
-DB_TABLES=`awk 'BEGIN {FS = "[ .(]"}; /CREATE TABLE/ { print $7 }' sql/create_db.sql | grep -v -e "info_" -e "_pay" `
+echo "Data rentetion policy for payout data:" $PAYOUT_DATA_RETENTION " DAYS"
+echo "Expired payout data older than:" `date -d @${PAYOUT_DATA_RETENTION}` ", ${PAYOUT_DATA_RETENTION} (EPOCH)"
 
+DB_TABLES=`awk 'BEGIN {FS = "[ .(]"}; /CREATE TABLE/ { print $7 }' sql/create_db.sql | grep -v -e "info_" -e "_payouts" `
 for TABLE in $DB_TABLES; do
 
 	EXPIRED_DATA_SQL="DELETE FROM $TABLE WHERE UNIX_TIMESTAMP(time) < ${EXPIRED_DATA};"
 	echo "SQL to remove expired data from $TABLE: ${EXPIRED_DATA_SQL}"
+	echo $EXPIRED_DATA_SQL | mysql -v -v -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata
+
+done
+
+PAYOUT_DB_TABLES=`awk 'BEGIN {FS = "[ .(]"}; /CREATE TABLE/ { print $7 }' sql/create_db.sql | grep "_payouts" `
+for TABLE in $PAYOUT_DB_TABLES; do
+
+	EXPIRED_DATA_SQL="DELETE FROM $TABLE WHERE UNIX_TIMESTAMP(date) < ${EXPIRED_DATA};"
+	echo "SQL to remove payout expired data from $TABLE: ${EXPIRED_DATA_SQL}"
 	echo $EXPIRED_DATA_SQL | mysql -v -v -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata
 
 done
