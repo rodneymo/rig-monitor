@@ -26,6 +26,8 @@ for ARGUMENT in "$@"; do
 		POOL_LIST=("${POOL_LIST[@]:$L_INDEX:1}")
 	else
 		echo "Argument unknonw: ${ARGUMENT}"
+		rm ${BASE_DIR}/run/POOL_LOCK 
+		exit
 	fi
 done
 
