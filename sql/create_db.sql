@@ -1,3 +1,15 @@
+drop table info_rig;
+drop table info_gpu;
+drop tables status_rig;
+drop table status_gpu;
+drop table ethermine_stats;
+drop table ethermine_payouts;
+drop table mpos_stats;
+drop table mpos_payouts;
+drop table nanopool_generalinfo;
+drop table nanopool_payouts;
+drop table coinmarket;
+
 CREATE DATABASE IF NOT EXISTS rigdata;
 
 #CREATE USER IF NOT EXISTS 'grafana2'@localhost IDENTIFIED BY 'grafana';
