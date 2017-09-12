@@ -1,7 +1,7 @@
 # USED BY update-rig-info.sh
 
 BEGIN {
-	FS = "(: )|(, )"
+	FS = "[ ,:()]"
 	GPU_INDEX=0
 }
 
@@ -11,11 +11,9 @@ BEGIN {
 # READ GPU INFO E.G.
 # GPU #0: Ellesmere, 8192 MB available, 36 compute units
 /^GPU #/ { 
-	gpu[GPU_INDEX,"MODEL"]=$2
-	gpu[GPU_INDEX,"MEMORY"]=$3
-	sub(/ MB available/,"",gpu[GPU_INDEX,"MEMORY"])	
-	gpu[GPU_INDEX,"PROC"]=$4A
-	sub(/ compute units/,"",gpu[GPU_INDEX,"PROC"])
+	gpu[GPU_INDEX,"MODEL"]=$4
+	gpu[GPU_INDEX,"MEMORY"]=$6
+	gpu[GPU_INDEX,"PROC"]=$10
 	GPU_INDEX++
 }
 
