@@ -58,10 +58,12 @@ BEGIN {
 /^  (DCR|SC|LBC|PASC):/ {
         #print $5,$9,$13,$17,$21,$25
 	gpu_field=6
+	_index=0
 	while ( gpu_field < NF ) {
-		_index = gpu_field/6 - 1
+#               _index = gpu_field/6 - 1
 		gpu[_index,"HASHRATE_DCOIN"]=$gpu_field
 		gpu_field+=4	
+		_index++
 	}
 }
 
