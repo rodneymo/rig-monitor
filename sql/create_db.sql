@@ -13,7 +13,7 @@ drop table coinmarket;
 CREATE DATABASE IF NOT EXISTS rigdata;
 
 #CREATE USER IF NOT EXISTS 'grafana2'@localhost IDENTIFIED BY 'grafana';
-GRANT SELECT ON `rigdata`.* TO `grafana`@`localhost` IDENTIFIED BY 'grafana';
+GRANT ALL PRIVILEGES ON `rigdata`.* TO `grafana`@`localhost` IDENTIFIED BY 'grafana';
 
 CONNECT rigdata;
 
