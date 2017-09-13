@@ -15,15 +15,15 @@ BEGIN {
 	gpu[GPU_INDEX,"MODEL"]=$2
 	gpu[GPU_INDEX,"MEMORY"]=$3
 	sub(/ MB available/,"",gpu[GPU_INDEX,"MEMORY"])	
-	gpu[GPU_INDEX,"PROC"]=$4A
+	gpu[GPU_INDEX,"PROC"]=$4
 	sub(/ compute units/,"",gpu[GPU_INDEX,"PROC"])
 	GPU_INDEX++
 }
 
 END {
-		for ( gpu_id = 0; gpu_id < GPU_INDEX; gpu_id++ ) {
-			print "GPU," rig_name "/" gpu_id "," gpu[gpu_id,"MODEL"] "," gpu[gpu_id,"MEMORY"] "," gpu[gpu_id,"PROC"]
-		}
+	for ( gpu_id = 0; gpu_id < GPU_INDEX; gpu_id++ ) {
+		print "GPU," rig_name "/" gpu_id "," gpu[gpu_id,"MODEL"] "," gpu[gpu_id,"MEMORY"] "," gpu[gpu_id,"PROC"]
+	}
 
 #	print "SYSTEM NAME: " rig_name
 #	for ( i = 0; i < GPU_INDEX; i++ ) {

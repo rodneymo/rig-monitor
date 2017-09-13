@@ -16,12 +16,13 @@ BEGIN {
 	GPU_INDEX++
 } 
 
-# READ ETH TOTAL HASHRATE and SHARE INFO  E.G.
+#READ ETH TOTAL HASHRATE and SHARE INFO  E.G.
 #ETH - Total Speed: 160.966 Mh/s, Total Shares: 13015(2219+2204+2130+2167+2186+2226), Rejected: 0, Time: 100:02
 /^ETH - Total Speed: / { 
 	#print $6,$12,$16,$20,$21  
 	current_hashrate_eth=$6
 	total_shares_eth=$12
+
 	_gpu_shares_eth=$12
 	sub(/\([0-9+]+\)/,"",total_shares_eth)
 	gsub(/^[0-9]+\(|\)/,"",_gpu_shares_eth)
@@ -29,32 +30,44 @@ BEGIN {
 	for ( i = 0; i < GPU_INDEX; i++ ) {
 		gpu[i,"SHARES_ETH"]=gpu_shares_eth[i+1]
 	}
+
 	rejected_shares_eth = $16
 	mining_time = $20  $21 "00" 
 }	
-# READ DCR/SC/LBC/PASC TOTAL HASHRATE and SHARE INFO  E.G.
-#  SC - Total Speed: 43.678 Mh/s, Total Shares: 0, Rejected: 0 
+#READ DCR/SC/LBC/PASC TOTAL HASHRATE and SHARE INFO  E.G.
+#  SC - Total Speed: 43.678 Mh/s, Total Shares: 13015(2219+2204+2130+2167+2186+2226), Rejected: 0
 /^  (DCR|SC|LBC|PASC) - Total Speed: / { 
 	#print $8,$14,$18
 	current_hashrate_dcoin = $8
 	total_shares_dcoin = $14
+
+	_gpu_shares_eth=$14
+	sub(/\([0-9+]+\)/,"",total_shares_dcoin)
+	gsub(/^[0-9]+\(|\)/,"",_gpu_shares_dcoin)
+	split(_gpu_shares_dcoin,gpu_shares_dcoin,"+")
+	for ( i = 0; i < GPU_INDEX; i++ ) {
+		gpu[i,"SHARES_DCOIN"]=gpu_shares_dcoin[i+1]
+	}
+
 	rejected_shares_dcoin = $18
 }	
 
-# READ ETH GPU HASHRATE E.G.
-# ETH: GPU0 27.688 Mh/s, GPU1 27.789 Mh/s, GPU2 26.442 Mh/s, GPU3 27.245 Mh/s, GPU4 27.072 Mh/s, GPU5 27.053 Mh/s
+#READ ETH GPU HASHRATE E.G.
+#ETH: GPU0 27.688 Mh/s, GPU1 27.789 Mh/s, GPU2 26.442 Mh/s, GPU3 27.245 Mh/s, GPU4 27.072 Mh/s, GPU5 27.053 Mh/s
 /^ETH:/ {
         #print $4,$8,$12,$16,$20,$24
 	gpu_field=4
+	_index=0
 	while ( gpu_field < NF ) {
-		_index = gpu_field/4 - 1
+#		_index = gpu_field/4 - 1
 		gpu[_index,"HASHRATE_ETH"]=$gpu_field
 		gpu_field+=4	
+		_index++;
 	}
 }
 
-# READ DCR/SC/LBC/PASC GPU HASHRATE E.G.
-#   SC: GPU0 43.678 Mh/s 
+#READ DCR/SC/LBC/PASC GPU HASHRATE E.G.
+#  SC: GPU0 43.678 Mh/s 
 /^  (DCR|SC|LBC|PASC):/ {
         #print $5,$9,$13,$17,$21,$25
 	gpu_field=6
