@@ -1,0 +1,7 @@
+Simple crontab file necessary for automatic updates. 
+
+You may need to remove lines that do not apply to your installation.  For example, if you do not need dynamic dns, remove that line.
+
+Change <rig-monitor dir> to your base dir (e.g. /usr/home/pi) and run the following command from whatever user you wish to run the automated update scripts (usually same user as base install).
+
+crontab crontabfile
