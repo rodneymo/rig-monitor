@@ -1,0 +1,6 @@
+35 * * * * <rig-monitor dir>/dns_update.sh > /dev/null
+0 1 * * *  <rig-monitor dir>/update-rig-info.sh > /dev/null
+* * * * *  <rig-monitor dir>/rig-monitor.sh > /dev/null
+*/10 * * * *  <rig-monitor dir>/pool-monitor.sh > /dev/null
+*/10 * * * *  <rig-monitor dir>/coinmarket.sh > /dev/null
+0 2 * * *  <rig-monitor dir>/cleanup.sh > /dev/null
