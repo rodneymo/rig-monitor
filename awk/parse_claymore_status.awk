@@ -41,7 +41,7 @@ BEGIN {
 	current_hashrate_dcoin = $8
 	total_shares_dcoin = $14
 
-	_gpu_shares_eth=$14
+	_gpu_shares_dcoin=$14
 	sub(/\([0-9+]+\)/,"",total_shares_dcoin)
 	gsub(/^[0-9]+\(|\)/,"",_gpu_shares_dcoin)
 	split(_gpu_shares_dcoin,gpu_shares_dcoin,"+")
