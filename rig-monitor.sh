@@ -41,7 +41,7 @@ do
 	fi
 
 	
-	IFS=$',' read RIG_NAME RIG_IP PLUG_IP NUM_GPUS TARGET_HASHRATE TARGET_TEMP TARGET_POWER <<<${RIG_LINE}
+	IFS=$',' read RIG_NAME RIG_IP PLUG_IP INSTALLED_GPUS TARGET_HR_ETH TARGET_HR_DCOIN MAX_TEMP MAX_POWER <<<${RIG_LINE}
 	echo "collecting data from $RIG_NAME..."
 	
 	# load and capture claymore's http status page 
@@ -49,7 +49,6 @@ do
 	if (( DEBUG == 1 )); then
 		echo "$TIME $CLAYMORE_READOUT"
 	fi
-
 
 	if [ "$SMART_PLUGS" == "1" ];then
 		# read power usage from smart plug
@@ -63,9 +62,21 @@ do
 
 
 	# filter rig,gpu records and dump them into data file
-	awk -f ${BASE_DIR}/awk/parse_claymore_status.awk -v time=${TIME} rig_name=${RIG_NAME} power_usage=${POWER_USAGE} <<< "$CLAYMORE_READOUT" >> ${DATA_DIR}/${STATUS_DATA_FILE}
+	DATA_POINTS=`awk -f ${BASE_DIR}/awk/parse_claymore_status.awk \
+		-v time=${TIME} rig_name=${RIG_NAME} installed_gpus=${INSTALLED_GPUS} target_hr_eth=${TARGET_HR_ETH} target_hr_dcoin=${TARGET_HR_DCOIN} \
+		max_power=${MAX_POWER} power_usage=${POWER_USAGE} gpu_max_temp=${MAX_TEMP} \
+		<<< "$CLAYMORE_READOUT" `
+
+	while read -r LINE; do
+		echo $LINE
+	done	<<< "$DATA_POINTS"	
 
 done 
+
+# curl -i -XPOST 'http://localhost:8086/write?db=mydb' --data-binary '
+
+rm ${BASE_DIR}/run/RIG_LOCK
+exit
 
 if [ -f ${DATA_DIR}/${STATUS_DATA_FILE} ]; then
 
@@ -87,6 +98,5 @@ if [ -f ${DATA_DIR}/${STATUS_DATA_FILE} ]; then
 fi
 
 IFS=$SAVEIFS
-
 rm ${BASE_DIR}/run/RIG_LOCK
 

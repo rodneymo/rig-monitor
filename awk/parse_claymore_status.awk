@@ -1,6 +1,11 @@
+#RIG
+#rig_data,rig_name=serverA,miner=claymore,miner_version=10.0 installed_gpus=6, active_gpus=6, gpu_info=, total_hr_eth, avg_hr_eth, shares_eth, rej_shares_eth,total_hr_dcoin, avg_hr_dcoin, shares_dcoin, rej_shares_dcoin, power_usage=, mining_time=
+#GPU
+#gpu_data,rig_name=serverA,gpu_id=0 gpu_hr_eth=, gpu_shares_eth=, gpu_inc_shares_eth=, gpu_hr_dcoin=, gpu_shares_dcoin=, pu_inc_shares_dcoin=, gpu_temp=, gpu_fan= 
+
 BEGIN {
-	FS = "[ ,:]"
-	GPU_INDEX=0
+	FS = "(: )|(, )"
+	NUM_GPUS=0
 	TRACE=0
 }
 
@@ -10,58 +15,72 @@ BEGIN {
 # IGNORE LINES WITH INCORRECT SHARES WARNING
 / got incorrect share/ {next}
 
-# READ NUMBER of GPUs
+# READ GPU INFO E.G.
 # GPU #0: Ellesmere, 8192 MB available, 36 compute units
+# GPU #0: GeForce GTX 1060 6GB, 6144 MB available, 10 compute units, capability: 6.1
 /^GPU #/ { 
-	GPU_INDEX++
-} 
+	#gpu[NUM_GPUS,"MODEL"]=$2
+	#gpu[NUM_GPUS,"MEMORY"]=$3
+	#sub(/ MB available/,"",gpu[NUM_GPUS,"MEMORY"])	
+	#gpu[NUM_GPUS,"PROC"]=$4
+	#sub(/ compute units/,"",gpu[NUM_GPUS,"PROC"])
+	gpu[NUM_GPUS,"SPECS"]=$2 "," $3 "," $4
+	NUM_GPUS++
+}
 
 #READ ETH TOTAL HASHRATE and SHARE INFO  E.G.
 #ETH - Total Speed: 160.966 Mh/s, Total Shares: 13015(2219+2204+2130+2167+2186+2226), Rejected: 0, Time: 100:02
 /^ETH - Total Speed: / { 
-	#print $6,$12,$16,$20,$21  
-	current_hashrate_eth=$6
-	total_shares_eth=$12
+	#print $0
+	#print $2,$4,$6,
+	total_hr_eth=$2
+	sub(/ .*/,"",total_hr_eth)
 
-	_gpu_shares_eth=$12
+	total_shares_eth=$4
 	sub(/\([0-9+]+\)/,"",total_shares_eth)
+
+	_gpu_shares_eth=$4
 	gsub(/^[0-9]+\(|\)/,"",_gpu_shares_eth)
 	split(_gpu_shares_eth,gpu_shares_eth,"+")
-	for ( i = 0; i < GPU_INDEX; i++ ) {
+	for ( i = 0; i < NUM_GPUS; i++ ) {
 		gpu[i,"SHARES_ETH"]=gpu_shares_eth[i+1]
 	}
 
-	rejected_shares_eth = $16
-	mining_time = $20  $21 "00" 
+	rej_shares_eth=$6
+	mining_time=$8
 }	
+
 #READ DCR/SC/LBC/PASC TOTAL HASHRATE and SHARE INFO  E.G.
 #  SC - Total Speed: 43.678 Mh/s, Total Shares: 13015(2219+2204+2130+2167+2186+2226), Rejected: 0
 /^  (DCR|SC|LBC|PASC) - Total Speed: / { 
-	#print $8,$14,$18
-	current_hashrate_dcoin = $8
-	total_shares_dcoin = $14
+	#print $0
+	#print $2,$4,$6
+	total_hr_dcoin=$2
+	sub(/ .*/,"",total_hr_dcoin)
 
-	_gpu_shares_dcoin=$14
+	total_shares_dcoin=$4
 	sub(/\([0-9+]+\)/,"",total_shares_dcoin)
+
+	_gpu_shares_dcoin=$4
 	gsub(/^[0-9]+\(|\)/,"",_gpu_shares_dcoin)
 	split(_gpu_shares_dcoin,gpu_shares_dcoin,"+")
-	for ( i = 0; i < GPU_INDEX; i++ ) {
+	for ( i = 0; i < NUM_GPUS; i++ ) {
 		gpu[i,"SHARES_DCOIN"]=gpu_shares_dcoin[i+1]
 	}
 
-	rejected_shares_dcoin = $18
+	rej_shares_dcoin=$6
 }	
 
 #READ ETH GPU HASHRATE E.G.
 #ETH: GPU0 27.688 Mh/s, GPU1 27.789 Mh/s, GPU2 26.442 Mh/s, GPU3 27.245 Mh/s, GPU4 27.072 Mh/s, GPU5 27.053 Mh/s
 /^ETH:/ {
-        #print $4,$8,$12,$16,$20,$24
-	gpu_field=4
+        #print $0
 	_index=0
-	while ( gpu_field < NF ) {
-#		_index = gpu_field/4 - 1
-		gpu[_index,"HASHRATE_ETH"]=$gpu_field
-		gpu_field+=4	
+	while ( _index < NUM_GPUS ) {
+		gpu_field=_index + 2
+		gpu_hr=$gpu_field
+	        gsub(/^GPU[0-9]+ | .*/,"",gpu_hr)
+		gpu[_index,"HR_ETH"]=gpu_hr
 		_index++;
 	}
 }
@@ -69,40 +88,66 @@ BEGIN {
 #READ DCR/SC/LBC/PASC GPU HASHRATE E.G.
 #  SC: GPU0 43.678 Mh/s 
 /^  (DCR|SC|LBC|PASC):/ {
-        #print $5,$9,$13,$17,$21,$25
-	gpu_field=6
+        #print $0
 	_index=0
-	while ( gpu_field < NF ) {
-#               _index = gpu_field/6 - 1
-		gpu[_index,"HASHRATE_DCOIN"]=$gpu_field
-		gpu_field+=4	
-		_index++
+	while ( _index < NUM_GPUS ) {
+		gpu_field=_index + 2
+		gpu_hr=$gpu_field
+	        gsub(/^GPU[0-9]+ | .*/,"",gpu_hr)
+		gpu[_index,"HR_DCOIN"]=gpu_hr
+		_index++;
 	}
 }
 
 # READ INCORRECT SHARES E.G.
 # Incorrect ETH shares: GPU1 23, GPU2 34
 /^Incorrect ETH shares:/ { 
-	gpu_field = 5 
+	#print $0
+	gpu_field=2
 	while ( gpu_field < NF ) {
-		_index = substr($gpu_field,4,1)
-		gpu[_index,"INC_SHARES_ETH"] = $(gpu_field+1)
-		gpu_field+=3
+		gpu_index = $gpu_field
+		gpu_inc_shares=$gpu_field
+		gsub(/GPU| [0-9]+/,"",gpu_index)
+		sub(/GPU[0-9 ]+ /,"",gpu_inc_shares)
+		gpu[gpu_index,"INC_SHARES_ETH"] = gpu_inc_shares
+		gpu_field++
+	}
+}
+
+# READ INCORRECT SHARES E.G.
+# Incorrect DCR/SC/LBC/PASC  shares: GPU1 23, GPU2 34
+/^Incorrect (DCR|SC|LBC|PASC) shares:/ { 
+	#print $0
+	gpu_field=2
+	while ( gpu_field < NF ) {
+		gpu_index = substr($gpu_field,4,1)
+		gpu_inc_shares=$gpu_field
+		sub(/GPU[0-9 ]+/,"",gpu_inc_shares)
+		gpu[gpu_index,"INC_SHARES_DCOIN"] = gpu_inc_shares
+		gpu_field++
 	}
 }
 
 # READ ! MIN AVERAGE HASRATE E.G.
+
+# READ ! MIN AVERAGE HASRATE E.G.
 #  1 minute average ETH total speed: 163.095 Mh/s
-/^ 1 minute average / { average_hashrate_eth = $9 }
+/^ 1 minute average / { 
+	#print $0
+	avg_hr_eth = $2 
+	sub(/ .*/,"",avg_hr_eth)
+}
+
 
 # READ EPOCH AND DAG
 # Current ETH share target: 0x00000000ffb34c02 (diff: 4300MH), epoch 27(1.21GB)
 # Current ETH share target: 0x0000000112e0be82 (diff: 4000MH), epoch 141(2.10GB) Current SC share target: 0x0000000007547ff5 (diff: 150GH) 
 /^Current ETH share target/ { 
-        dag=$12
-        dag_size=$12
-        sub(/\([0-9A-Z\.]+\)/,"",dag)
-        gsub(/^[0-9]+\(|\)/,"",dag_size)
+	#print $4
+        dag=$4
+        dag_size=$4
+        gsub(/^epoch |\([0-9A-Z\.]+\)/,"",dag)
+        gsub(/^epoch [0-9]+\(|\)/,"",dag_size)
 	#print dag
 	#print dag_size
 	}
@@ -110,44 +155,49 @@ BEGIN {
 # READ FAN SPEED and TEMP FROM GPUS E.G. 
 #GPU0 t=68C fan=79%, GPU1 t=68C fan=61%, GPU2 t=68C fan=65%, GPU3 t=67C fan=66%, GPU4 t=68C fan=38%, GPU5 t=66C fan=38%
 /^GPU0 t/ {
+	#print $0
         gpu_field = 1
-        while ( gpu_field < NF ) {
-                _index = substr($gpu_field,4,1)
-		_temp = substr($(gpu_field+1),3,2)
-		_fan = substr($(gpu_field+2),5,(index($(gpu_field+2),"%")-5))
-                gpu[_index,"TEMP"] = _temp
-                gpu[_index,"FAN"] = _fan
-                gpu_field+=4
+        while ( gpu_field <= NF ) {
+		_index=$gpu_field
+		temp=$gpu_field
+		fan=$gpu_field
+                gsub(/^GPU| t=.*/,"",_index)
+                gsub(/^GPU[0-9]+ t=|C fan.*/,"",temp)
+                gsub(/^GPU[0-9]+ t=[0-9]+C fan=|%/,"",fan)
+                gpu[_index,"TEMP"] = temp
+                gpu[_index,"FAN"] = fan
+                gpu_field++
+		pring temp "," fan
         }
 }
 
 END {
-        print "RIG," time "," rig_name "," GPU_INDEX "," current_hashrate_eth ","average_hashrate_eth "," total_shares_eth "," rejected_shares_eth "," current_hashrate_dcoin ","average_hashrate_dcoin ","  total_shares_dcoin "," rejected_shares_dcoin "," power_usage "," mining_time
+        print "rig_data,rig_name=" rig_name ",miner=claymore" " " "installed_gpus=" installed_gpus ",active_gpus=" NUM_GPUS ",target_hr_eth="target_hr_eth ",total_hr_eth=" total_hr_eth ",avg_hr_eth=" avg_hr_eth ",total_shares_eth=" total_shares_eth ",rej_shares_eth=" rej_shares_eth ",target_hr_dcoin=" target_hr_dcoin ",total_hr_dcoin=" ,total_hr_dcoin ",avg_hr_dcoin=" ,avg_hr_dcoin ",total_shares_dcoin=" total_shares_dcoin ",rej_shares_dcoin=" rej_shares_dcoin ",max_power=" max_power ",power_usage=" power_usage ",mining_time=" mining_time
 
-        for ( gpu_id = 0; gpu_id < GPU_INDEX; gpu_id++ ) {
-                print "GPU," time "," rig_name "/" gpu_id "," gpu[gpu_id,"HASHRATE_ETH"] "," gpu[gpu_id,"SHARES_ETH"] "," gpu[gpu_id,"INC_SHARES_ETH"] "," gpu[gpu_id,"HASHRATE_DCOIN"] "," gpu[gpu_id,"SHARES_DCOIN"] ","  gpu[gpu_id,"INC_SHARES_DCOIN"] "," gpu[gpu_id,"TEMP"] "," gpu[gpu_id,"FAN"]
+        for ( gpu_id = 0; gpu_id < NUM_GPUS; gpu_id++ ) {
+        	print "gpu_data,rig_name=" rig_name ",gpu_id=" gpu_id " " "gpu_specs=" gpu[gpu_id,"SPECS"] ",gpu_hr_eth=" gpu[gpu_id,"HR_ETH"] ",gpu_shares_eth=" gpu[gpu_id,"SHARES_ETH"] ",gpu_inc_shares_eth=" gpu[gpu_id,"INC_SHARES_ETH"] ",gpu_hr_dcoin=" gpu[gpu_id,"HR_DCOIN"] ",gpu_shares_dcoin=" gpu[gpu_id,"SHARES_DCOIN"] ",gpu_inc_shares_dcoin="  gpu[gpu_id,"INC_SHARES_DCOIN"] ",gpu_max_temp=" gpu_max_temp ",gpu_temp=" gpu[gpu_id,"TEMP"] ",gpu_fan=" gpu[gpu_id,"FAN"]
         }
 	
 	if (TRACE != 0) { 
 	print "SYSTEM NAME: " rig_name
-	print "\tETH CURRENT HASHRATE: " current_hashrate_eth
-	print "\tETH AVERAGE HASHRATE ETH: " average_hashrate_eth
+	print "\tETH CURRENT HASHRATE: " total_hr_eth
+	print "\tETH AVERAGE HASHRATE ETH: " avg_hr_eth
 	print "\tETH TOTAL SHARES: " total_shares_eth
-	print "\tETH REJECTED SHARES: " rejected_shares_eth
-	print "\tDCR/SC/LBC/PASC CURRENT HASHRATE: " current_hashrate_dcoin
-	print "\tDCR/SC/LBC/PASC AVERAGE HASHRATE: " average_hashrate_dcoin
+	print "\tETH REJECTED SHARES: " rej_shares_eth
+	print "\tDCR/SC/LBC/PASC CURRENT HASHRATE: " total_hr_dcoin
+	print "\tDCR/SC/LBC/PASC AVERAGE HASHRATE: " avg_hr_dcoin
 	print "\tDCR/SC/LBC/PASC TOTAL SHARES: " total_shares_dcoin
-	print "\tDCR/SC/LBC/PASC REJECTED SHARES: " rejected_shares_dcoin
+	print "\tDCR/SC/LBC/PASC REJECTED SHARES: " rej_shares_dcoin
 	print "\tPOWER USAGE: " power_usage
 	print "\tETH MINING TIME: " mining_time
 	print "\tETH DAG #: " dag ", DAG SIZE: " dag_size
 
-	for ( i = 0; i < GPU_INDEX; i++ ) {
+	for ( i = 0; i < NUM_GPUS; i++ ) {
 		print "GPU#" i
-		print "\tETH HASHRATE: " gpu[i,"HASHRATE_ETH"]
+		print "\tETH HASHRATE: " gpu[i,"HR_ETH"]
 		print "\tETH SHARES: " gpu[i,"SHARES_ETH"]
 		print "\tETH INCORRECT_SHARES: " gpu[i,"INC_SHARES_ETH"]
-		print "\tDCR/SC/LBC/PASC HASHRATE: " gpu[i,"HASHRATE_DCOIN"]
+		print "\tDCR/SC/LBC/PASC HASHRATE: " gpu[i,"HR_DCOIN"]
 		print "\tDCR/SC/LBC/PASC SHARES: " gpu[i,"SHARES_DCOIN"]
 		print "\tDCR/SC/LBC/PASC INCORRECT SHARES: " gpu[i,"INC_SHARES_DCOIN"]
 		print "\tTEMP.(C): " gpu[i,"TEMP"]
