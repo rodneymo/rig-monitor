@@ -5,6 +5,7 @@
 
 BEGIN {
 	FS = "(: )|(, )"
+	ORS = "\n"
 	NUM_GPUS=0
 	TRACE=0
 }
@@ -129,8 +130,6 @@ BEGIN {
 }
 
 # READ ! MIN AVERAGE HASRATE E.G.
-
-# READ ! MIN AVERAGE HASRATE E.G.
 #  1 minute average ETH total speed: 163.095 Mh/s
 /^ 1 minute average / { 
 	#print $0
@@ -172,10 +171,10 @@ BEGIN {
 }
 
 END {
-        print "rig_data,rig_name=" rig_name ",miner=claymore" " " "installed_gpus=" installed_gpus ",active_gpus=" NUM_GPUS ",target_hr_eth="target_hr_eth ",total_hr_eth=" total_hr_eth ",avg_hr_eth=" avg_hr_eth ",total_shares_eth=" total_shares_eth ",rej_shares_eth=" rej_shares_eth ",target_hr_dcoin=" target_hr_dcoin ",total_hr_dcoin=" ,total_hr_dcoin ",avg_hr_dcoin=" ,avg_hr_dcoin ",total_shares_dcoin=" total_shares_dcoin ",rej_shares_dcoin=" rej_shares_dcoin ",max_power=" max_power ",power_usage=" power_usage ",mining_time=" mining_time
+        print "rig_data,rig_name=" rig_name ",miner=claymore" " " "installed_gpus=" installed_gpus ",active_gpus=" NUM_GPUS ",target_hr_eth="target_hr_eth ",total_hr_eth=" total_hr_eth",avg_hr_eth=" avg_hr_eth ",total_shares_eth=" total_shares_eth ",rej_shares_eth=" rej_shares_eth ",target_hr_dcoin=" target_hr_dcoin ",total_hr_dcoin=" total_hr_dcoin ",avg_hr_dcoin=" avg_hr_dcoin ",total_shares_dcoin=" total_shares_dcoin ",rej_shares_dcoin=" rej_shares_dcoin ",max_power=" max_power ",power_usage=" power_usage ",mining_time=\"" mining_time "\""
 
         for ( gpu_id = 0; gpu_id < NUM_GPUS; gpu_id++ ) {
-        	print "gpu_data,rig_name=" rig_name ",gpu_id=" gpu_id " " "gpu_specs=" gpu[gpu_id,"SPECS"] ",gpu_hr_eth=" gpu[gpu_id,"HR_ETH"] ",gpu_shares_eth=" gpu[gpu_id,"SHARES_ETH"] ",gpu_inc_shares_eth=" gpu[gpu_id,"INC_SHARES_ETH"] ",gpu_hr_dcoin=" gpu[gpu_id,"HR_DCOIN"] ",gpu_shares_dcoin=" gpu[gpu_id,"SHARES_DCOIN"] ",gpu_inc_shares_dcoin="  gpu[gpu_id,"INC_SHARES_DCOIN"] ",gpu_max_temp=" gpu_max_temp ",gpu_temp=" gpu[gpu_id,"TEMP"] ",gpu_fan=" gpu[gpu_id,"FAN"]
+        	print "gpu_data,rig_name=" rig_name ",gpu_id=" gpu_id " " "gpu_specs=\"" gpu[gpu_id,"SPECS"] "\",gpu_hr_eth=" gpu[gpu_id,"HR_ETH"] ",gpu_shares_eth=" gpu[gpu_id,"SHARES_ETH"] ",gpu_inc_shares_eth=" gpu[gpu_id,"INC_SHARES_ETH"] ",gpu_hr_dcoin=" gpu[gpu_id,"HR_DCOIN"] ",gpu_shares_dcoin=" gpu[gpu_id,"SHARES_DCOIN"] ",gpu_inc_shares_dcoin="  gpu[gpu_id,"INC_SHARES_DCOIN"] ",gpu_max_temp=" gpu_max_temp ",gpu_temp=" gpu[gpu_id,"TEMP"] ",gpu_fan=" gpu[gpu_id,"FAN"]
         }
 	
 	if (TRACE != 0) { 

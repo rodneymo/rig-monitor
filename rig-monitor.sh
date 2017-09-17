@@ -7,7 +7,7 @@ cd $BASE_DIR
 . ${BASE_DIR}/lib/functions
 
 # epoch TIME
-TIME=`date +%s`
+TIME=`date +%s%N`
 
 if [ -f ${BASE_DIR}/run/RIG_LOCK ]; then
     	echo "rig-monitor process still running! Exiting..."
@@ -61,41 +61,18 @@ do
 	fi
 
 
-	# filter rig,gpu records and dump them into data file
+	# parse miner output, prepare data for influxdb ingest and filter out null tags, fields
 	DATA_POINTS=`awk -f ${BASE_DIR}/awk/parse_claymore_status.awk \
 		-v time=${TIME} rig_name=${RIG_NAME} installed_gpus=${INSTALLED_GPUS} target_hr_eth=${TARGET_HR_ETH} target_hr_dcoin=${TARGET_HR_DCOIN} \
 		max_power=${MAX_POWER} power_usage=${POWER_USAGE} gpu_max_temp=${MAX_TEMP} \
 		<<< "$CLAYMORE_READOUT" `
-
-	while read -r LINE; do
-		echo $LINE
-	done	<<< "$DATA_POINTS"	
+	DATA_BINARY=`echo "${DATA_POINTS}" |  sed -e 's/[a-z0-9_]\+=,//g' -e 's/,[a-z0-9_]\+= $//g'`
+        if (( DEBUG == 1 )); then
+               echo "$DATA_BINARY"
+        fi
+	curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
 
 done 
-
-# curl -i -XPOST 'http://localhost:8086/write?db=mydb' --data-binary '
-
-rm ${BASE_DIR}/run/RIG_LOCK
-exit
-
-if [ -f ${DATA_DIR}/${STATUS_DATA_FILE} ]; then
-
-        echo "ingesting claymore status data..."
-        LAST_INGESTED_RECORD=$(bookkeeping "LAST_INGESTED_CLAYMORE_STATUS")
-        echo "last ingested status record: $LAST_INGESTED_RECORD"
-
-	# filter out old records
-	awk -f ${BASE_DIR}/awk/filter_claymore_records_by_time_tag.awk -v last_record=$LAST_INGESTED_RECORD record_type=RIG ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/rig_status.tmp
-	awk -f ${BASE_DIR}/awk/filter_claymore_records_by_time_tag.awk -v last_record=$LAST_INGESTED_RECORD record_type=GPU ${DATA_DIR}/${STATUS_DATA_FILE} > ${TMP_DIR}/gpu_status.tmp
-
-	# INSERT STATUS DATA INTO DB	
-	mysql $MYSQL_VERBOSE -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_status_data.sql
-
-	# update bookkeeping file
-	LAST_INGESTED_RECORD=`tail -1 ${DATA_DIR}/${STATUS_DATA_FILE} | cut -d',' -f 2`
-	$(bookkeeping "LAST_INGESTED_CLAYMORE_STATUS" ${LAST_INGESTED_RECORD})
-	echo "updating last ingested claymore status record to: $LAST_INGESTED_RECORD"
-fi
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/RIG_LOCK
