@@ -21,7 +21,6 @@ for ARGUMENT in "$@"; do
 		set -x
 	elif [[ $ARGUMENT =~ ^-r[0-9]+ ]]; then
 		DEBUG=1
-		MYSQL_VERBOSE=" -vvv --show-warnings " 
 		L_INDEX=${ARGUMENT:2}
 		RIG_LIST=("${RIG_LIST[@]:$L_INDEX:1}")
 	else

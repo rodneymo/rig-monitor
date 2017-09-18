@@ -1,0 +1,4 @@
+coinmarketcap,crypto_name=bitcoin,base_currency=BTC,quote_currency=EUR price_eur=3363.33404655,price_btc=1.0,24h_volume_eur=1541004367.41,market_cap_eur=55743057654.0
+coinmarketcap,crypto_name=bitcoin,base_currency=BTC,quote_currency=USD price_usd=4021.65,price_btc=1.0,24h_volume_usd=1842630000.0,market_cap_usd=66653821688.0
+coinmarketcap,crypto_name=ethereum,base_currency=ETH,quote_currency=EUR price_eur=241.839913032,price_btc=0.0713934,24h_volume_eur=926419079.25,market_cap_eur=22900655682.0
+coinmarketcap,crypto_name=musicoin,base_currency=MUSIC,quote_currency=EUR price_eur=0.0199916679,price_btc=0.00000590,24h_volume_eur=155758.833522,market_cap_eur=6775708.0

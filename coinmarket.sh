@@ -21,7 +21,6 @@ for ARGUMENT in "$@"; do
                 set -x
         elif [[ $ARGUMENT =~ ^-c[0-9]+ ]]; then
                 DEBUG=1
-                MYSQL_VERBOSE=" -vvv --show-warnings "
                 L_INDEX=${ARGUMENT:2}
                 COIN_LIST=("${COIN_LIST[@]:$L_INDEX:1}")
         else
@@ -61,40 +60,34 @@ do
 	fi
         if [ "$CURL_STATUS" == "id not found" ]; then
                 echo "$BASE_CURRENCY DOES NOT EXIST. PLEASE CHECK CONF FILE"
-	else
+		continue
+	fi
+
+
+	MEASUREMENT="coinmarketcap"
+	CRYPTO_SYMBOL=`echo $CURL_OUTPUT | jq -r '.[].symbol'` 
+	TAGS="crypto_name=${BASE_CURRENCY},base_currency=${CRYPTO_SYMBOL},quote_currency=${QUOTE_CURRENCY}"
+
+	if [ "$QUOTE_CURRENCY" != "USD" ]; then
 		PRICE="price_${QUOTE_CURRENCY,,}"
 		VOLUME="24h_volume_${QUOTE_CURRENCY,,}"
 		MARKET="market_cap_${QUOTE_CURRENCY,,}"
-		echo $CURL_OUTPUT | jq -r --arg price $PRICE --arg volume $VOLUME --arg market $MARKET --arg currency $QUOTE_CURRENCY '.[] | [.last_updated,.symbol,.name,.price_btc,$currency,.[$price],.[$volume],.[$market]] | @csv' |sed 's/\"//g' >> ${DATA_DIR}/${MARKET_DATA_FILE}
+
+		FIELDS=`echo $CURL_OUTPUT | jq -r --arg price $PRICE --arg volume $VOLUME --arg market $MARKET --arg currency $QUOTE_CURRENCY '.[] | "\($price)=\(.[$price]),price_btc=\(.price_btc),\($volume)=\(.[$volume]),\($market)=\(.[$market])"' `
+	else
+		FIELDS=`echo $CURL_OUTPUT | jq -r '.[] | "price_usd=\(.price_usd),price_btc=\(.price_btc),24h_volume_usd=\(."24h_volume_usd"),market_cap_usd=\(.market_cap_usd)"' `
+
 	fi
+	LINE="${MEASUREMENT},${TAGS} ${FIELDS}"
+	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+
 done
 
-#INGEST COINMARKET  DATA
-if [ -f ${DATA_DIR}/${MARKET_DATA_FILE} ] ; then
-
-	echo "ingesting coinmarket data..."
-
-	# sort and remove duplicate entries in DATA file
-	sort --field-separator=',' ${DATA_DIR}/${MARKET_DATA_FILE} | uniq > ${DATA_DIR}/${MARKET_DATA_FILE}.tmp
-	mv ${DATA_DIR}/${MARKET_DATA_FILE}.tmp ${DATA_DIR}/${MARKET_DATA_FILE}
-
-	BOOKKEEPING_RECORD_NAME="COINMARKET_LAST_RECORD"
-
-	LAST_RECORD=$(bookkeeping $BOOKKEEPING_RECORD_NAME)
-	echo "last ingested coinmarket data: $LAST_RECORD"
-
-	# filter out old records using LABEL and LAST_RECORD as filters
-       	awk -f ${BASE_DIR}/awk/filter_old_coinmarket_records.awk -v last_record=$LAST_RECORD ${DATA_DIR}/${MARKET_DATA_FILE} > ${TMP_DIR}/coinmarket.tmp
-
-	mysql $MYSQL_VERBOSE  -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_coinmarket_data.sql
-
-	# update bookkeeping file
-	$(bookkeeping $BOOKKEEPING_RECORD_NAME $RUN_TIME)
-	echo "updating last ingested market data to: $RUN_TIME"
-
-fi
+if (( DEBUG == 1 )); then
+	echo "$DATA_BINARY"
+fi 
+curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
 
 IFS=$SAVEIFS
-
 rm ${BASE_DIR}/run/COINMARKET_LOCK 
 
