@@ -67,7 +67,7 @@ echo "done"
 if (( DEBUG == 1 )); then
 	echo "$DATA_BINARY"
 fi 
-#curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
+curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
 
 IFS=$SAVEIFS
 
