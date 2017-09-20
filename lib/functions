@@ -9,15 +9,17 @@ bookkeeping () {
         	done < "${RECORD_LOG}"
 	fi
 
-	# create entry in bookkeeping log if record does not exist
-	if [[ !${records[$1]} ]];then
-		echo $1=$RESET_DATE >> ${RECORD_LOG}
-		records[$1]=$RESET_DATE
-	fi
-        
+       	# read 
         if [ "$#" -eq 1 ];then
-                #read & return  record value
-                echo ${records[$1]}
+		if [ -z "${records[$1]}" ];then
+			# create record
+			echo $1=$RESET_DATE >> ${RECORD_LOG}
+			records[$1]=$RESET_DATE
+                	echo ${records[$1]}
+		else
+			# read entry in bookkeeping log if record exists
+                	echo ${records[$1]}
+		fi
         else    
                 # update record and save to file
                 > ${RECORD_LOG} 

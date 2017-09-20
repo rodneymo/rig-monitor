@@ -7,7 +7,7 @@ cd $BASE_DIR
 . ${BASE_DIR}/lib/functions
 
 # epoch RUN_TIME
-RUN_TIME=`date +%s`
+RUN_TIME=`date +%s%N`
 
 if [ -f ${BASE_DIR}/run/POOL_LOCK ]; then
     	echo "pool-monitor process still running! Exiting..."
@@ -21,7 +21,6 @@ for ARGUMENT in "$@"; do
 		set -x
 	elif [[ $ARGUMENT =~ ^-p[0-9]+ ]]; then
 		DEBUG=1
-		MYSQL_VERBOSE=" -vvv --show-warnings " 
 		L_INDEX=${ARGUMENT:2}
 		POOL_LIST=("${POOL_LIST[@]:$L_INDEX:1}")
 	else
@@ -42,144 +41,177 @@ do
 	fi
 	
 	echo -n "Querying $LABEL pool..." 
+
+        ######################## ETHERMINE POOL ########################
 	if [ "$POOL_TYPE" == "ETHERMINE" ]; then
+
+		############ Query currentStats ############
 		STATS_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/currentStats"
+		CURL_OUTPUT=`curl -s "${STATS_URL}" | jq -r '.data'`
+
 		if (( DEBUG == 1 )); then
 			echo "curl \"$STATS_URL\""
-		fi
-		CURL_OUTPUT=`curl -s "${STATS_URL}" | jq -r '.data'`
-		if (( DEBUG == 1 )); then
 			echo $CURL_OUTPUT | jq -r '.'
 		fi
+
 		if [ "$CURL_OUTPUT" == "NO DATA" ]; then
 			echo "NO DATA FOUND"
 		else
-			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL -r '. | .+ {"label": $LABEL, "report": "currentStats"} |[.time,.label,.report,.lastSeen,.reportedHashrate,.currentHashrate,.validShares,.invalidShares,.staleShares,.averageHashrate,.activeWorkers,.unpaid,.unconfirmed,.coinsPerMin,.usdPerMin,.btcPerMin] | @csv' |sed 's/\"//g' >> ${DATA_DIR}/$POOL_DATA_FILE
+			MEASUREMENT="pool_stats"
+			TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},api_token=${API_TOKEN},wallet_addr=${WALLET_ADDR}"
+			FIELDS_AND_TIME=`echo $CURL_OUTPUT | jq -r '. | "reportedHashrate=\(.reportedHashrate),currentHashrate=\(.currentHashrate),validShares=\(.validShares),invalidShares=\(.invalidShares),staleShares=\(.staleShares),averageHashrate=\(.averageHashrate),activeWorkers=\(.activeWorkers),unpaid=\(.unpaid),unconfirmed=\(.unconfirmed),coinsPerMin=\(.coinsPerMin),usdPerMin=\(.usdPerMin),btcPerMin=\(.btcPerMin) \(.time)000000000"' | sed 's/null/0/g' `
+			LINE="${MEASUREMENT},${TAGS} ${FIELDS_AND_TIME}"
+			DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 		fi
-
+		
+		############ Query payouts ############
 		PAYOUT_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/payouts"
-                if (( DEBUG == 1 )); then
-			echo "curl \"$PAYOUT_URL\""
-                fi 
+		LAST_RECORD=$(bookkeeping ETHERMINE_PAYOUTS_LAST_RECORD)
+		CURL_OUTPUT=`curl -s "${PAYOUT_URL}" | jq --arg LAST_RECORD $LAST_RECORD -r '.data[]? | select (.paidOn > ($LAST_RECORD | tonumber))'`
 
-		CURL_OUTPUT=`curl -s "${PAYOUT_URL}" | jq -r '.data[]'`
-                PAYOUT_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/payouts"
                 if (( DEBUG == 1 )); then
-			echo $CURL_OUTPUT | jq -r '.'
+			echo "Last ingested record: ${LAST_RECORD}"
+			echo "curl \"$PAYOUT_URL\""
+			echo $CURL_OUTPUT 
                 fi
 
 		if [ "$CURL_OUTPUT" == "" ]; then
 			echo "NO DATA FOUND"
 		else
-			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL -r '. | .+ {"label": $LABEL, "report": "payouts"} | [.paidOn,.label,.report,.start,.end,.amount,.txHash] | @csv' |sed 's/\"//g' >> ${DATA_DIR}/$POOL_DATA_FILE
-		fi
 
+			MEASUREMENT="pool_payments"
+			TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},api_token=${API_TOKEN},wallet_addr=${WALLET_ADDR}"
+			FIELDS_AND_TIME=`echo $CURL_OUTPUT | jq -r '. | "amount=\(.amount),txHash=\"\(.txHash)\" \(.paidOn)000000000"'`
+			while read -r _FIELD; do
+				LINE="${MEASUREMENT},${TAGS} ${_FIELD}"
+				RECORD_TIME=`echo ${LINE} | awk '{ print substr($NF,1,11) }' `
+				if (( RECORD_TIME > LAST_RECORD )) ; then
+					LAST_RECORD=${RECORD_TIME}
+				fi
+				DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+			done <<< "$FIELDS_AND_TIME"
+                	if (( DEBUG == 1 )); then
+				echo "Updating last ingested processed: ${LAST_RECORD}"
+			fi
+
+			$(bookkeeping ETHERMINE_PAYOUTS_LAST_RECORD ${LAST_RECORD})
+		fi
+		
+
+        ######################## MPOS POOL ########################
 	elif [ "$POOL_TYPE" == "MPOS" ]; then
 
+                ############ Query dashboarddata. Incl. payouts  ############
 		DASHBOARD_URL="${BASE_API_URL}/index.php?page=api&action=getdashboarddata&api_key=${API_TOKEN}"
-                if (( DEBUG == 1 )); then
-			echo "curl \"$DASHBOARD_URL\""
-                fi
 		CURL_OUTPUT=`curl -s "${DASHBOARD_URL}"`
                 if (( DEBUG == 1 )); then
+			echo "curl \"$DASHBOARD_URL\""
 			echo $CURL_OUTPUT | jq -r '.'
                 fi
+
 		if [ "$CURL_OUTPUT" == "Access denied" ]; then
 			echo "NO DATA FOUND"
 		else
-			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL --arg RUN_TIME $RUN_TIME -r '.getdashboarddata.data | .+ {"label": $LABEL, "report": "getdashboarddata_stats", "run_time": $RUN_TIME} | [.run_time,.label,.report,.raw.personal.hashrate,.raw.pool.hashrate,.raw.network.hashrate,.personal.shares.valid,.personal.shares.invalid,.personal.shares.unpaid,.balance.confirmed,.balance.unconfirmed] | @csv' |sed 's/\"//g' >>  ${DATA_DIR}/$POOL_DATA_FILE
-			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL -r '.getdashboarddata.data.recent_credits[] | .+ {"label": $LABEL, "report": "getdashboarddata_payouts"} | [.date,.label,.report,.amount] | @csv' |sed 's/\"//g'>> ${DATA_DIR}/$POOL_DATA_FILE
+			MEASUREMENT="pool_stats"
+			TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},data_type=stats,api_token=${API_TOKEN},wallet_addr=${WALLET_ADDR}"
+			FIELDS=`echo $CURL_OUTPUT | jq '.getdashboarddata.data | "hashrate=\(.raw.personal.hashrate),pool_hashrate=\(.raw.pool.hashrate),network_hashrate=\(.raw.network.hashrate),valid_shares=\(.personal.shares.valid),invalid_shares=\(.personal.shares.invalid),unpaid_shares=\(.personal.shares.unpaid),balance_confirmed=\(.balance.confirmed),balance_unconfirmed=\(.balance.unconfirmed)"'`
+			
+			LINE="${MEASUREMENT},${TAGS} ${FIELDS} ${RUN_TIME}"
+			DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+
+			MEASUREMENT="pool_stats"
+			TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},data_type=payouts,api_token=${API_TOKEN},wallet_addr=${WALLET_ADDR}"
+			FIELDS_AND_DATE=`echo $CURL_OUTPUT | jq '.getdashboarddata.data.recent_credits[] | "amount=\(.amount) \(.date)"' | sed 's/\"//g'`
+
+			while read AMOUNT _DATE; do
+				DATE_EPOCH=`date --date="${_DATE}" +%s`
+				LINE="${MEASUREMENT},${TAGS} ${AMOUNT} ${DATE_EPOCH}000000"
+				DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+			done <<< "$FIELDS_AND_DATE"
 		fi
 
+        ######################## NANOPOOL POOL ########################
 	elif [ "$POOL_TYPE" == "NANOPOOL" ]; then
 
-		GENERALINFO_URL="${BASE_API_URL}/v1/${CRYPTO,,}/user/${WALLET_ADDR}"
+                ############ Query chardata ############
+		CHARTDATA_URL="https://api.nanopool.org/v1/${CRYPTO,,}/hashratechart/${WALLET_ADDR}"
+
+		CURL_OUTPUT=`curl -s "${CHARTDATA_URL}"`
                 if (( DEBUG == 1 )); then
-			echo "curl \"$GENERALINFO_URL\""
+			echo "curl \"$CHARTDATA_URL\""
+			echo $CURL_OUTPUT | jq -r '.data[]'
                 fi
-		CURL_OUTPUT=`curl -s "${GENERALINFO_URL}" | jq -r '.'`
-		CURL_STATUS=`echo $CURL_OUTPUT | jq -r '.status'`
-                if (( DEBUG == 1 )); then
-			echo $CURL_STATUS 
-                fi
-		if [ "$CURL_STATUS" == "false" ]; then
+
+		if [ "$CURL_OUTPUT" == "" ]; then
 			echo "NO DATA FOUND"
 		else
-			CURL_OUTPUT=`echo $CURL_OUTPUT | jq -r '.data'`
-                	if (( DEBUG == 1 )); then
-				echo $CURL_OUTPUT | jq -r '.'
-               	 	fi
-			echo $CURL_OUTPUT  | jq --arg LABEL $LABEL --arg RUN_TIME $RUN_TIME -r '. | .+ {"label": $LABEL, "report": "generalinfo", "run_time": $RUN_TIME} | [.run_time,.label,.report,.hashrate,.avgHashrate.h1,.avgHashrate.h3,.avgHashrate.h6,.avgHashrate.h12,.avgHashrate.h24,.balance,.unconfirmed_balance] | @csv' |sed 's/\"//g' >>  ${DATA_DIR}/$POOL_DATA_FILE
+			MEASUREMENT="pool_stats"
+			TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},data_type=stats,api_token=${API_TOKEN},wallet_addr=${WALLET_ADDR}"
+                        FIELDS_AND_DATE=`echo $CURL_OUTPUT | jq '.data[] | "hashrate=\(.hashrate),shares=\(.shares) \(.date)000000000"' | sed 's/\"//g'`
+			#echo $FIELDS_AND_DATE;
+                        while read -r _LINE; do
+				echo ${_LINE}
+                                LINE="${MEASUREMENT},${TAGS} ${_LINE}"
+                                DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+                        done <<< "$FIELDS_AND_DATE"
 		fi
 
-		PAYMENTS_URL="${BASE_API_URL}/v1/${CRYPTO,,}/payments/${WALLET_ADDR}"
+                ############ Query payments ############
+		PAYOUTS_URL="https://api.nanopool.org/v1/${CRYPTO,,}/payments/${WALLET_ADDR}"
+
+		CURL_OUTPUT=`curl -s "${PAYOUTS_URL}"`
                 if (( DEBUG == 1 )); then
-			echo "curl \"$PAYMENTS_URL\""
-               	fi
-		CURL_OUTPUT=`curl -s "${PAYMENTS_URL}" | jq -r '.'`
-		CURL_STATUS=`echo $CURL_OUTPUT | jq -r '.data[]'`
-                if (( DEBUG == 1 )); then
-			echo $CURL_STATUS | jq -r '.'
-               	fi
-		if [ "$CURL_STATUS" == "" ]; then
+			echo "curl \"$PAYOUTS_URL\""
+			echo $CURL_OUTPUT | jq -r '.data[]'
+                fi
+
+		if [ "$CURL_OUTPUT" == "" ]; then
 			echo "NO DATA FOUND"
 		else
-			echo $CURL_OUTPUT | jq --arg LABEL $LABEL -r '.data[] | .+ {"label": $LABEL, "report": "payments"} | [.date,.label,.report,.amount,.txHash,.confirmed] | @csv' |sed 's/\"//g' >>  ${DATA_DIR}/$POOL_DATA_FILE
+			MEASUREMENT="pool_stats"
+			TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},data_type=payouts,api_token=${API_TOKEN},wallet_addr=${WALLET_ADDR}"
+                        FIELDS_AND_DATE=`echo $CURL_OUTPUT | jq '.data[] | "amount=\(.amount),txHash=\"\(.txHash)\" \(.date)000000000"' `
+			echo $FIELDS_AND_DATE;
+                        while read -r _LINE; do
+				echo ${_LINE}
+                                LINE="${MEASUREMENT},${TAGS} ${_LINE}"
+                                DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+                        done <<< "$FIELDS_AND_DATE"
 		fi
+
+                ############ Query block stats ############
+		BLOCK_STATS_URL="https://api.nanopool.org/v1/${CRYPTO,,}/block_stats/0/50"
+
+                CURL_OUTPUT=`curl -s "${BLOCK_STATS_URL}"`
+                if (( DEBUG == 1 )); then
+                        echo "curl \"$BLOCK_STATS_URL\""
+                        echo $CURL_OUTPUT | jq -r '.data[]'
+                fi
+
+                if [ "$CURL_OUTPUT" == "" ]; then
+                        echo "NO DATA FOUND"
+                else
+                        MEASUREMENT="pool_stats"
+			TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},data_type=stats,api_token=${API_TOKEN},wallet_addr=${WALLET_ADDR}"
+                        FIELDS_AND_DATE=`echo $CURL_OUTPUT | jq '.data[] | "difficulty=\(.difficulty),block_time=\"\(.block_time)\" \(.date)000000000"' `
+                        echo $FIELDS_AND_DATE;
+                        while read -r _LINE; do
+                                LINE="${MEASUREMENT},${TAGS} ${_LINE}"
+                                DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+                        done <<< "$FIELDS_AND_DATE"
+                fi
 
 	fi
+
 	echo "done"
 done
 
-# INGEST POOL DATA
-if [ -f ${DATA_DIR}/${POOL_DATA_FILE} ] ; then
-
-        # sort and remove duplicate entries in DATA file
-        sort --field-separator=',' ${DATA_DIR}/${POOL_DATA_FILE} | uniq > ${DATA_DIR}/${POOL_DATA_FILE}.tmp
-        mv ${DATA_DIR}/${POOL_DATA_FILE}.tmp ${DATA_DIR}/${POOL_DATA_FILE}
-
-	for POOL_LINE in "${POOL_LIST[@]}"; do
-		IFS=$',' read POOL_TYPE CRYPO LABEL BASE_API_URL API_TOKEN WALLET_ADDR <<<${POOL_LINE}
-
-		echo "Ingesting $LABEL pool data..."
-		BOOKKEEPING_RECORD_NAME="${LABEL}_POOL_LAST_RECORD"
-
-		LAST_RECORD=$(bookkeeping $BOOKKEEPING_RECORD_NAME)
-		echo "last ingested $LABEL pool stats: $LAST_RECORD"
-
-		if [ "$POOL_TYPE" == "ETHERMINE" ]; then
-			# filter out old records using LABEL and LAST_RECORD as filters
-       			awk -f ${BASE_DIR}/awk/filter_pool_records_by_time_and_tag.awk -v label=$LABEL report=currentStats last_record=$LAST_RECORD ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_ethermine_stats.tmp
-       			awk -f ${BASE_DIR}/awk/filter_pool_records_by_tag.awk -v label=$LABEL report=payouts ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_ethermine_payouts.tmp
-
-			mysql $MYSQL_VERBOSE -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_ethermine_data.sql
-
-		elif [ "$POOL_TYPE" == "MPOS" ]; then
-			# filter out records using report and LAST_RECORD as filters
-       			awk -f ${BASE_DIR}/awk/filter_pool_records_by_time_and_tag.awk -v label=$LABEL report=getdashboarddata_stats last_record=$LAST_RECORD ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_getdashboarddata_stats.tmp
-			# filter out records using report and LAST_RECORD as filters
-       			awk -f ${BASE_DIR}/awk/filter_pool_records_by_tag.awk -v label=$LABEL report=getdashboarddata_payouts ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_getdashboarddata_payouts.tmp
-
-			mysql $MYSQL_VERBOSE -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_mpos_data.sql
-
-		elif [ "$POOL_TYPE" == "NANOPOOL" ]; then
-			# filter out records using report and LAST_RECORD as filters
-       			awk -f ${BASE_DIR}/awk/filter_pool_records_by_time_and_tag.awk -v label=$LABEL report=generalinfo last_record=$LAST_RECORD ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_generalinfo.tmp
-			# filter out records using report and LAST_RECORD as filters
-       			awk -f ${BASE_DIR}/awk/filter_pool_records_by_tag.awk -v label=$LABEL report=payments ${DATA_DIR}/${POOL_DATA_FILE} > ${TMP_DIR}/${POOL_TYPE}_payments.tmp
-
-			mysql $MYSQL_VERBOSE -u ${GRAFANA_DB_USER} -p${GRAFANA_DB_PWD}  --local-infile rigdata < ${SQL_SCRIPTS}/ingest_nanopool_data.sql
-
-		fi
-
-		# update bookkeeping file
-		$(bookkeeping $BOOKKEEPING_RECORD_NAME $RUN_TIME)
-		echo "updating last ingested $LABEL pool stats to: $RUN_TIME"
-	done
-
-fi
+# Write to DB
+if (( DEBUG == 1 )); then
+	echo "$DATA_BINARY"
+fi 
+#curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
 
 IFS=$SAVEIFS
-
 rm ${BASE_DIR}/run/POOL_LOCK 
 
