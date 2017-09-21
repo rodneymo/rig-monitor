@@ -32,7 +32,7 @@ fi
 		
 ############ Query payouts ############
 PAYOUT_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/payouts"
-LAST_RECORD=$(bookkeeping ETHERMINE_PAYOUTS_LAST_RECORD)
+LAST_RECORD=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=SELECT last(amount) from pool_payments" | jq -r '.results[0].series[0].values[0][0]' | awk '/^null/ { print 0 }; /[0-9]+/ {print substr($1,1,10) };' `
 CURL_OUTPUT=`curl -s "${PAYOUT_URL}" | jq --arg LAST_RECORD $LAST_RECORD -r '.data[]? | select (.paidOn > ($LAST_RECORD | tonumber))'`
 
 if (( DEBUG == 1 )); then
@@ -58,7 +58,6 @@ else
 		echo "Updating last ingested processed: ${LAST_RECORD}"
         fi
 
-        $(bookkeeping ETHERMINE_PAYOUTS_LAST_RECORD ${LAST_RECORD})
 fi
 
 echo "done"
