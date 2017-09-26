@@ -32,7 +32,23 @@ done
 
 SAVEIFS=$IFS
 
-# FETCH MARKET DATA VIA COINMARKET API
+
+############# query crypto netwwork info from whattomine #############
+
+WHATTOMINE_URL="https://whattomine.com/coins.json"
+
+WHATTOMINE_OUTPUT=`curl -s "${WHATTOMINE_URL}" | jq -r '.'`
+if (( DEBUG == 1 )); then
+	echo $WHATTOMINE_URL
+fi
+
+API_STATUS=`echo $WHATTOMINE_OUTPUT | jq -r '.'`
+
+if [ "$API_STATUS" == "" ]; then
+        echo "WHATTOMINE website seems to be down"
+fi
+
+############# query coinmarketcap.com #############
 for COIN_LINE in "${COIN_LIST[@]}"
 do
 	IFS=$',' read BASE_CURRENCY QUOTE_CURRENCY <<<${COIN_LINE}
@@ -63,10 +79,20 @@ do
 		continue
 	fi
 
-
 	MEASUREMENT="coinmarketcap"
 	CRYPTO_SYMBOL=`echo $CURL_OUTPUT | jq -r '.[].symbol'` 
 	TAGS="crypto_name=${BASE_CURRENCY},base_currency=${CRYPTO_SYMBOL},quote_currency=${QUOTE_CURRENCY}"
+	if (( DEBUG == 1 )); then
+		echo "Looking up network info for ${BASE_CURRENCY}(${CRYPTO_SYMBOL})"
+	fi
+
+	WHATTOMINE_FIELDS=`echo $WHATTOMINE_OUTPUT | jq -r --arg crypto $CRYPTO_SYMBOL '.coins | to_entries[] | select (.value.tag==$crypto) | "difficulty=\(.value.difficulty),block_reward=\(.value.block_reward),block_time=\(.value.block_time)"' | sed 's/null/0/g' `
+	if [ "${WHATTOMINE_FIELDS}" != "" ]; then
+		WHATTOMINE_FIELDS=",${WHATTOMINE_FIELDS}"
+	fi
+	if (( DEBUG == 1 )); then
+		echo $WHATTOMINE_FIELDS
+	fi
 
 	if [ "$QUOTE_CURRENCY" != "USD" ]; then
 		PRICE="price_${QUOTE_CURRENCY,,}"
@@ -75,10 +101,10 @@ do
 
 		FIELDS=`echo $CURL_OUTPUT | jq -r --arg price $PRICE --arg volume $VOLUME --arg market $MARKET --arg currency $QUOTE_CURRENCY '.[] | "\($price)=\(.[$price]),price_btc=\(.price_btc),\($volume)=\(.[$volume]),\($market)=\(.[$market])"' `
 	else
-		FIELDS=`echo $CURL_OUTPUT | jq -r '.[] | "price_usd=\(.price_usd),price_btc=\(.price_btc),24h_volume_usd=\(."24h_volume_usd"),market_cap_usd=\(.market_cap_usd)"' `
+		FIELDS=`echo $CURL_OUTPUT | jq -r '.[] | "price_usd=\(.price_usd),price_btc=\(.price_btc),24h_volume_usd=\(."24h_volume_usd"),market_cap_usd=\(.market_cap_usd)"'  `
 
 	fi
-	LINE="${MEASUREMENT},${TAGS} ${FIELDS}"
+	LINE="${MEASUREMENT},${TAGS} ${FIELDS}${WHATTOMINE_FIELDS}"
 	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 
 done
