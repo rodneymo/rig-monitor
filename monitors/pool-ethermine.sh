@@ -7,45 +7,79 @@ RUN_TIME=`date +%s%N`
 
 SAVEIFS=$IFS
 
+case "$CRYPTO"  in
+	ETH) BASE_API_URL="https://api.ethermine.org"
+    	;;
+	ETC) BASE_API_URL="https://api-etc.ethermine.org"
+    	;;
+	ZEC) BASE_API_URL="https://api-zcash.flypool.org"
+    	;;
+esac
+
+if (( DEBUG == 1 )); then
+	echo "BASE API: ${BASE_API_URL}"
+fi
 ######################## ETHERMINE POOL ########################
 
 echo -n "Querying $LABEL pool..." 
 
 ############ Query currentStats ############
+
 STATS_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/currentStats"
-CURL_OUTPUT=`curl -s "${STATS_URL}" | jq -r '.data'`
+STATS_OUTPUT=`curl -s "${STATS_URL}" | jq -r '.data'`
 
 if (( DEBUG == 1 )); then
 	echo "curl \"$STATS_URL\""
-	echo $CURL_OUTPUT | jq -r '.'
+	echo $STATS_OUTPUT | jq -r '.'
 fi
 
-if [ "$CURL_OUTPUT" == "NO DATA" ]; then
+if [ "$STATS_OUTPUT" == "NO DATA" ]; then
 	echo "NO DATA FOUND"
 else
 	MEASUREMENT="pool_stats"
-	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},api_token=${API_TOKEN},wallet_addr=${WALLET_ADDR}"
-	FIELDS_AND_TIME=`echo $CURL_OUTPUT | jq -r '. | "reportedHashrate=\(.reportedHashrate),currentHashrate=\(.currentHashrate),validShares=\(.validShares),invalidShares=\(.invalidShares),staleShares=\(.staleShares),averageHashrate=\(.averageHashrate),activeWorkers=\(.activeWorkers),unpaid=\(.unpaid),unconfirmed=\(.unconfirmed),coinsPerMin=\(.coinsPerMin),usdPerMin=\(.usdPerMin),btcPerMin=\(.btcPerMin) \(.time)000000000"' | sed 's/null/0/g' `
+	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL}"
+	FIELDS_AND_TIME=`echo $STATS_OUTPUT | jq -r '. | "reported_hr=\(.reportedHashrate),hr=\(.currentHashrate),valid_shares=\(.validShares),invalid_shares=\(.invalidShares),stale_shares=\(.staleShares),avg_hr_24h=\(.averageHashrate),active_workers=\(.activeWorkers),unpaid=\(.unpaid),unconfirmed=\(.unconfirmed),coinsPerMin=\(.coinsPerMin),usdPerMin=\(.usdPerMin),btcPerMin=\(.btcPerMin) \(.time)000000000"' | sed 's/null/0/g' `
 	LINE="${MEASUREMENT},${TAGS} ${FIELDS_AND_TIME}"
 	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 fi
-		
+
+############ Query networkStats ############
+NETWORK_URL="${BASE_API_URL}/networkStats"
+NETWORK_OUTPUT=`curl -s "${NETWORK_URL}" | jq -r '.'`
+
+if (( DEBUG == 1 )); then
+	echo "curl \"$NETWORK_URL\""
+	echo $NETWORK_OUTPUT  | jq -r '.'
+fi
+
+API_STATUS=`echo $NETWORK_OUTPUT | jq -r '.status'` 
+if [ "$API_STATUS" != "OK" ]; then
+	echo "NO DATA FOUND"
+else
+	MEASUREMENT="network_stats"
+	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL}"
+	FIELDS_AND_TIME=`echo $NETWORK_OUTPUT | jq -r '.data| "hashrate=\(.hashrate),difficulty=\(.difficulty),block_time=\(.blockTime) \(.time)000000000"' | sed 's/null/0/g' `
+	LINE="${MEASUREMENT},${TAGS} ${FIELDS_AND_TIME}"
+	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+fi
+
 ############ Query payouts ############
-PAYOUT_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/payouts"
-LAST_RECORD=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=SELECT last(amount) from pool_payments" | jq -r '.results[0].series[0].values[0][0]' | awk '/^null/ { print 0 }; /[0-9]+/ {print substr($1,1,10) };' `
-CURL_OUTPUT=`curl -s "${PAYOUT_URL}" | jq --arg LAST_RECORD $LAST_RECORD -r '.data[]? | select (.paidOn > ($LAST_RECORD | tonumber))'`
+PAYMENTS_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/payouts"
+LAST_RECORD_SQL="SELECT last(amount) from pool_payments where label='"${LABEL}"'"
+LAST_RECORD=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${LAST_RECORD_SQL}" | jq -r '.results[0].series[0].values[0][0]' | awk '/^null/ { print 0 }; /[0-9]+/ {print substr($1,1,10) };' `
+PAYMENT_OUTPUTS=`curl -s "${PAYMENTS_URL}" | jq --arg LAST_RECORD $LAST_RECORD -r '.data[]? | select (.paidOn > ($LAST_RECORD | tonumber))'`
 
 if (( DEBUG == 1 )); then
 	echo "Last ingested record: ${LAST_RECORD}"
-	echo "curl \"$PAYOUT_URL\""
-	echo $CURL_OUTPUT 
+	echo "curl \"$PAYMENTS_URL\""
+	echo $PAYMENT_OUTPUTS 
 fi
-if [ "$CURL_OUTPUT" == "" ]; then
+if [ "$PAYMENT_OUTPUTS" == "" ]; then
 	echo "NO DATA FOUND"
 else
 	MEASUREMENT="pool_payments"
-	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},api_token=${API_TOKEN},wallet_addr=${WALLET_ADDR}"
-	FIELDS_AND_TIME=`echo $CURL_OUTPUT | jq -r '. | "amount=\(.amount),txHash=\"\(.txHash)\" \(.paidOn)000000000"'`
+	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL}"
+	FIELDS_AND_TIME=`echo $PAYMENT_OUTPUTS | jq -r '. | "amount=\(.amount),txHash=\"\(.txHash)\" \(.paidOn)000000000"'`
 	while read -r _FIELD; do
 		LINE="${MEASUREMENT},${TAGS} ${_FIELD}"
 		RECORD_TIME=`echo ${LINE} | awk '{ print substr($NF,1,11) }' `
