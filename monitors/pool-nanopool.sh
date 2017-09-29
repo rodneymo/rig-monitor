@@ -7,7 +7,11 @@ RUN_TIME=`date +%s%N`
 
 SAVEIFS=$IFS
 
-BASE_API_URL="https://api.nanopool.org/v1/${CRYPTO,,}"
+if [ "$CRYPTO" == "SC" ]; then
+	BASE_API_URL="https://api.nanopool.org/v1/sia"
+else
+	BASE_API_URL="https://api.nanopool.org/v1/${CRYPTO,,}"
+fi
 
 if (( DEBUG == 1 )); then
 	echo "BASE API: ${BASE_API_URL}"
