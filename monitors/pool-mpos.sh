@@ -57,7 +57,7 @@ if (( DEBUG == 1 )); then
 	echo $WORKERS_OUTPUT  | jq -r '.'
 fi
 
-if [ "$CURL_OUTPUT" == "Access denied" ]; then
+if [ "$WORKERS_OUTPUT" == "Access denied" ]; then
         echo "NO DATA FOUND"
 else
 	MEASUREMENT="workers_stats"

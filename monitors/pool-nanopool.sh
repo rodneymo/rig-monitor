@@ -82,6 +82,27 @@ if [ "$API_STATUS" == "true" ] && [ "$API_STATUS_2" == "true" ]; then
 	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 fi
 
+############ Query workers ############
+WORKERS_URL="${BASE_API_URL}/avghashrateworkers/${WALLET_ADDR}/24"
+WORKERS_OUTPUT=`curl -s "${WORKERS_URL}" | jq -r '.'`
+
+if (( DEBUG == 1 )); then
+	echo "curl \"$WORKERS_URL\""
+	echo $WORKERS_OUTPUT  | jq -r '.'
+fi
+
+if [ "$WORKERS_OUTPUT" == "" ]; then
+	echo "NO DATA FOUND"
+else
+	MEASUREMENT="workers_stats"
+	WORKER_TAG_AND_FIELDS=`echo $WORKERS_OUTPUT | jq -r '.data[] | "worker_id=\(.worker) avg_hr_24h=\(.hashrate)"' `
+	while read -r WORKER_TAG FIELDS; do
+		TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},${WORKER_TAG}"
+		LINE="${MEASUREMENT},${TAGS} ${FIELDS} ${RUN_TIME}"
+		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+	done<<< "$WORKER_TAG_AND_FIELDS"
+fi
+
 ############ Query payouts ############
 PAYMENTS_URL="${BASE_API_URL}/payments/${WALLET_ADDR}"
 LAST_RECORD_SQL="SELECT last(amount) from pool_payments where label='"${LABEL}"'"
