@@ -43,10 +43,32 @@ else
 
         while read AMOUNT _DATE; do
 		DATE_EPOCH=`date --date="${_DATE}" +%s`
-		LINE="${MEASUREMENT},${TAGS} ${AMOUNT} ${DATE_EPOCH}000000"
+		LINE="${MEASUREMENT},${TAGS} ${AMOUNT} ${DATE_EPOCH}000000000"
 		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
         done <<< "$FIELDS_AND_DATE"
 fi
+
+############ Query workers ############
+WORKERS_URL="${BASE_API_URL}/index.php?page=api&action=getuserworkers&api_key=${API_TOKEN}"
+WORKERS_OUTPUT=`curl -s "${WORKERS_URL}" | jq -r '.'`
+
+if (( DEBUG == 1 )); then
+	echo "curl \"$WORKERS_URL\""
+	echo $WORKERS_OUTPUT  | jq -r '.'
+fi
+
+if [ "$CURL_OUTPUT" == "Access denied" ]; then
+        echo "NO DATA FOUND"
+else
+	MEASUREMENT="workers_stats"
+	WORKER_TAG_AND_FIELDS=`echo $WORKERS_OUTPUT | jq -r '.getuserworkers.data[] | "worker_id=\(.username) current_hr=\(.hashrate)"' | sed -s 's/[0-9a-zA-Z]*\.//' `
+	while read -r WORKER_TAG FIELDS; do
+		TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},${WORKER_TAG}"
+		LINE="${MEASUREMENT},${TAGS} ${FIELDS} ${DATE_EPOCH}000000000"
+		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+	done<<< "$WORKER_TAG_AND_FIELDS"
+fi
+
 
 echo "done"
 
