@@ -63,6 +63,28 @@ else
 	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 fi
 
+############ Query workers ############
+WORKERS_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/workers"
+WORKERS_OUTPUT=`curl -s "${WORKERS_URL}" | jq -r '.'`
+
+if (( DEBUG == 1 )); then
+	echo "curl \"$WORKERS_URL\""
+	echo $WORKERS_OUTPUT  | jq -r '.'
+fi
+
+API_STATUS=`echo $WORKERS_OUTPUT | jq -r '.status'` 
+if [ "$API_STATUS" != "OK" ]; then
+	echo "NO DATA FOUND"
+else
+	MEASUREMENT="workers_stats"
+	WORKER_TAG_FIELDS_AND_TIME=`echo $WORKERS_OUTPUT | jq -r '.data[] | "worker_id=\(.worker) reported_hr=\(.reportedHashrate),current_hr=\(.currentHashrate),valid_shares=\(.validShares),invalid_shares=\(.invalidShares),stale_shares=\(.staleShares),avg_hr=\(.averageHashrate) \(.time)000000000"' `
+	while read -r WORKER_TAG FIELDS W_TIME; do
+		TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},${WORKER_TAG}"
+		LINE="${MEASUREMENT},${TAGS} ${FIELDS} ${W_TIME}"
+		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+	done<<< "$WORKER_TAG_FIELDS_AND_TIME"
+fi
+
 ############ Query payouts ############
 PAYMENTS_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/payouts"
 LAST_RECORD_SQL="SELECT last(amount) from pool_payments where label='"${LABEL}"'"
