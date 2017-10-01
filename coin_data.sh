@@ -17,9 +17,9 @@ else
 fi
 
 for ARGUMENT in "$@"; do
-        if [ "$ARGUMENT" == "-trace" ]; then
+        if [ "$ARGUMENT" == "-bt" ]; then
                 set -x
-        elif [ "$ARGUMENT" == "-debug" ]; then
+        elif [ "$ARGUMENT" == "-d" ]; then
                 DEBUG=1
         else
                 echo "Argument unknonw: ${ARGUMENT}"
