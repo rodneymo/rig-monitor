@@ -7,7 +7,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # epoch TIME
 TIME=`date +%s`
 
-echo "collecting data from $RIG_NAME..."
+echo "collecting data from $RIG_ID..."
 
 #INFLUXDB_IP='localhost'
 
@@ -35,7 +35,7 @@ else
 	DATA_POINTS_GPU_CSV=`sed -e 's/ /_/g' -e 's/"//g' <<< "$DATA_POINTS_GPU_CSV"`
 
 
-        DATA_POINTS_GPU=`awk -v RIGNAME=${RIGNAME} -v coin=${COIN_LABEL} -F"," \
+        DATA_POINTS_GPU=`awk -v RIGNAME=${RIG_ID} -v coin=${COIN_LABEL} -F"," \
 		        '{print "miner_gpu_ewbf,rig_id="RIGNAME",gpu_id="$1",gpu_specs="$8",coin=ZEC "\
 		        "gpu_hr="$2",gpu_shares="$3"i,gpu_rej_shares="$4"i,gpu_temp="$5"i,gpu_power="$6i",gpu_status="$7"i"}' \
 			<<< "$DATA_POINTS_GPU_CSV"`
@@ -47,7 +47,7 @@ else
 	RIG_REJ=`awk -F"," '{x+=$4}END{print x}' <<< "$DATA_POINTS_GPU_CSV"`
 	RIG_POWER=`awk -F"," '{x+=$6}END{print x}' <<< "$DATA_POINTS_GPU_CSV"`
 	RIG_UPTIME=`awk -F"," -v TIME=${TIME} '{printf "%i",TIME-$1}' <<< "$RIG_START"`
-	DATA_POINTS_RIG="miner_system_ewbf,rig_id=${RIGNAME},coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS}i,active_gpus=${RIG_GPU_HEALTH}i,target_hr=${TARGET_HR_ETH},total_hr=${RIG_HR},total_shares=${RIG_SHARES}i,rej_shares=${RIG_REJ}i,max_power=${MAX_POWER},power_usage=${RIG_POWER},mining_time=${RIG_UPTIME}i"
+	DATA_POINTS_RIG="miner_system_ewbf,rig_id=${RIG_ID},coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS}i,active_gpus=${RIG_GPU_HEALTH}i,target_hr=${TARGET_HR_ETH},total_hr=${RIG_HR},total_shares=${RIG_SHARES}i,rej_shares=${RIG_REJ}i,max_power=${MAX_POWER},power_usage=${RIG_POWER},mining_time=${RIG_UPTIME}i"
 
 	DATA_POINTS=${DATA_POINTS_RIG}$'\n'${DATA_POINTS_GPU}
 
