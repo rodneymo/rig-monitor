@@ -19,10 +19,11 @@ else
 fi
 
 for ARGUMENT in "$@"; do
-	if [ "$ARGUMENT" == "-trace" ]; then
+	if [ "$ARGUMENT" == "-bt" ]; then
 		set -x
-	elif [[ $ARGUMENT =~ ^-p[0-9]+ ]]; then
+	elif [ "$ARGUMENT" == "-d" ]; then
 		DEBUG=1
+	elif [[ $ARGUMENT =~ ^-p[0-9]+ ]]; then
 		L_INDEX=${ARGUMENT:2}
 		POOL_LIST=("${POOL_LIST[@]:$L_INDEX:1}")
 	else

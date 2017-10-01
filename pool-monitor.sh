@@ -16,10 +16,11 @@ else
 fi
 
 for ARGUMENT in "$@"; do
-	if [ "$ARGUMENT" == "-trace" ]; then
-		set -x
+        if [ "$ARGUMENT" == "-bt" ]; then
+                set -x
+        elif [ "$ARGUMENT" == "-d" ]; then
+                DEBUG=1
 	elif [[ $ARGUMENT =~ ^-p[0-9]+ ]]; then
-		DEBUG=1
 #		MYSQL_VERBOSE=" -vvv --show-warnings " 
 		L_INDEX=${ARGUMENT:2}
 		POOL_LIST=("${POOL_LIST[@]:$L_INDEX:1}")

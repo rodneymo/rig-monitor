@@ -16,10 +16,11 @@ else
 fi
 
 for ARGUMENT in "$@"; do
-	if [ "$ARGUMENT" == "-trace" ]; then
-		set -x
+        if [ "$ARGUMENT" == "-bt" ]; then
+                set -x
+        elif [ "$ARGUMENT" == "-d" ]; then
+                DEBUG=1
 	elif [[ $ARGUMENT =~ ^-r[0-9]+ ]]; then
-		DEBUG=1
 		L_INDEX=${ARGUMENT:2}
 		RIG_LIST=("${RIG_LIST[@]:$L_INDEX:1}")
 	else
