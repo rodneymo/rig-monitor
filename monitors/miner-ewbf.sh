@@ -15,7 +15,7 @@ echo "collecting data from $RIG_NAME..."
 EWBF_READOUT=`curl -s -m 5 "http://${RIG_IP}:42000/getstat"`
 
 if (( DEBUG == 1 )); then
-	echo "$TIME $CLAYMORE_READOUT"
+	echo "$TIME $EWBF_READOUT"
 fi
 
 
