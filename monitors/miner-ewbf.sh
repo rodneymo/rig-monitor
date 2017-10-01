@@ -18,16 +18,6 @@ if (( DEBUG == 1 )); then
 	echo "$TIME $CLAYMORE_READOUT"
 fi
 
-if [ "$SMART_PLUGS" == "1" ];then
-	# read power usage from smart plug
-	POWER_USAGE=`${BASE_DIR}/lib/tplink-smartplug.py -t ${PLUG_IP} -j '{"emeter":{"get_realtime":{}}}' | grep Received | sed 's/.*power\":\(\w\+\).*/\1/'`
-else
-	POWER_USAGE=0
-fi
-if (( DEBUG == 1 )); then
-	echo $RIG_NAME, $POWER_USAGE
-fi
-
 
 # parse miner output, prepare data for influxdb ingest and filter out null tags, fields
 if [ "$EWBF_READOUT" == "" ]; then
