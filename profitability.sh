@@ -42,9 +42,23 @@ do
 		echo "Pool info in conf file: $POOL_TYPE $CRYPTO $LABEL"
 	fi
 
-	# Query pool payments
-	# Query coin_data
-	# Calculate revenue, costs and profit for all periods (24h,7d,30d)
+	# Query coin price in BTC and QUOTE CURRENCY as defined in the conf file
+	COIN_PRICE_SQL="select * from coin_data where crypto='"${CRYPTO}"'"
+	COIN_PRICE=`curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${COIN_PRICE_SQL}" `
+	if (( DEBUG == 1 )); then
+		echo "SQL: ${COIN_PRICE_SQL}"
+		echo "OUTPUT: ${COIN_PRICE}"
+	fi
+	PRICE="price_${QUOTE_CURRENCY,,}"
+	VOLUME="24h_volume_${QUOTE_CURRENCY,,}"
+	MARKET="market_cap_${QUOTE_CURRENCY,,}"
+
+	c_data=($(echo $COIN_PRICE | jq -r --arg price $PRICE --arg volume $VOLUME --arg market $MARKET '.results[0].series[0].values[0] | "\(.[7]) \(.[8]) \(.[6]) \(.[1]) \(.[2]) \(.[3]) \(.[5])" '))
+	echo "${c_data[@]}"
+	
+	continue
+		
+	# Aggregate pool payments in 24h periods
 	LAST_RECORD_SQL="SELECT last(revenue) from profitability where label='"${LABEL}"'"
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${LAST_RECORD_SQL}"
@@ -61,13 +75,18 @@ do
 	fi
 	if [[ "$POOL_TYPE" == "MPOS" ]]; then
 		REVENUE_24H_SQL="select amount from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"'"
-		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${PAYMENT_RECORDS_SQL}" \
+		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${REVENUE_24H_SQL}" \
 			| jq -r '.results[0].series[0].values[] | "date=\(.[0]),revenue=\(.[1])"' `
 	else
 		REVENUE_24H_SQL="select sum(amount) from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"' group by time(24h)"
-		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${PAYMENT_RECORDS_SQL}" \
+		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${REVENUE_24H_SQL}" \
 			| jq -r '.results[0].series[0].values[] | "revenue=\(.[1]) \(.[0])"' `
 	fi
+	if (( DEBUG == 1 )); then
+		echo "SQL: ${REVENUE_24H_SQL}"
+		echo "OUTPUT: ${REVENUE_24H}"
+	fi
+
 	MEASUREMENT="revenue"
 	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL}"
 	while read -r FIELDS_AND_TIME;do 

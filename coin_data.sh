@@ -71,7 +71,7 @@ do
 	fi
 
 	MEASUREMENT="coin_data"
-	TAGS="crypto_name=${CRYPTO},quote_currency=${QUOTE_CURRENCY}"
+	TAGS="crypto=${CRYPTO},quote_currency=${QUOTE_CURRENCY}"
 	WTM_FIELDS=`echo $WTM_OUTPUT | jq -r --arg crypto "$CRYPTO" '.coins | to_entries[] | select (.value.tag==$crypto) | "difficulty=\(.value.difficulty),block_reward=\(.value.block_reward),block_time=\(.value.block_time)"' | sed 's/null/0/g' `
 
 
