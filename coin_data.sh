@@ -72,20 +72,20 @@ do
 
 	MEASUREMENT="coin_data"
 	TAGS="crypto_name=${CRYPTO},quote_currency=${QUOTE_CURRENCY}"
-	WTM_FIELDS=`echo $WTM_OUTPUT | jq -r --arg crypto $CRYPTO '.coins | to_entries[] | select (.value.tag==$crypto) | "difficulty=\(.value.difficulty),block_reward=\(.value.block_reward),block_time=\(.value.block_time)"' | sed 's/null/0/g' `
+	WTM_FIELDS=`echo $WTM_OUTPUT | jq -r --arg crypto "$CRYPTO" '.coins | to_entries[] | select (.value.tag==$crypto) | "difficulty=\(.value.difficulty),block_reward=\(.value.block_reward),block_time=\(.value.block_time)"' | sed 's/null/0/g' `
 
 
 	if [ "$QUOTE_CURRENCY" != "USD" ]; then
 		PRICE="price_${QUOTE_CURRENCY,,}"
 		VOLUME="24h_volume_${QUOTE_CURRENCY,,}"
 		MARKET="market_cap_${QUOTE_CURRENCY,,}"
-		FIELDS=`echo $CMC_OUTPUT | jq -r --arg crypto $CRYPTO --arg price $PRICE --arg volume $VOLUME --arg market $MARKET --arg currency $QUOTE_CURRENCY '.[] | select (.rank=="$crypto") | "\($price)=\(.[$price]),price_btc=\(.price_btc),\($volume)=\(.[$volume]),\($market)=\(.[$market])"' `
+		FIELDS=`echo $CMC_OUTPUT | jq -r --arg crypto "$CRYPTO" --arg price $PRICE --arg volume $VOLUME --arg market $MARKET --arg currency $QUOTE_CURRENCY '.[] | select (.symbol==$crypto) | "\($price)=\(.[$price]),price_btc=\(.price_btc),\($volume)=\(.[$volume]),\($market)=\(.[$market])"' `
 
 	else
-		FIELDS=`echo $CURL_OUTPUT | jq -r '.[] | "price_usd=\(.price_usd),price_btc=\(.price_btc),24h_volume_usd=\(."24h_volume_usd"),market_cap_usd=\(.market_cap_usd)"'  `
+		FIELDS=`echo $CMC_OUTPUT | jq -r --arg crypto "$CRYPTO" '.[] | select (.symbol==$crypto) | "price_usd=\(.price_usd),price_btc=\(.price_btc),24h_volume_usd=\(."24h_volume_usd"),market_cap_usd=\(.market_cap_usd)"'  `
 
 	fi
-	LINE="${MEASUREMENT},${TAGS} ${FIELDS}${WTM_FIELDS}"
+	LINE="${MEASUREMENT},${TAGS} ${FIELDS},${WTM_FIELDS}"
 	LINE=`echo $LINE | sed -e 's/,$//g' `
 	if (( DEBUG == 1 )); then
 		echo "${LINE}"
