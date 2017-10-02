@@ -79,12 +79,10 @@ do
 		PRICE="price_${QUOTE_CURRENCY,,}"
 		VOLUME="24h_volume_${QUOTE_CURRENCY,,}"
 		MARKET="market_cap_${QUOTE_CURRENCY,,}"
-		FIELDS=`echo $CMC_OUTPUT | jq -r --arg crypto "$CRYPTO" --arg price $PRICE --arg volume $VOLUME --arg market $MARKET --arg currency $QUOTE_CURRENCY '.[] | select (.rank=="$crypto") | "\($price)=\(.[$price]),price_btc=\(.price_btc),\($volume)=\(.[$volume]),\($market)=\(.[$market])"' `
+		FIELDS=`echo $CMC_OUTPUT | jq -r --arg crypto "$CRYPTO" --arg price $PRICE --arg volume $VOLUME --arg market $MARKET --arg currency $QUOTE_CURRENCY '.[] | select (.symbol==$crypto) | "\($price)=\(.[$price]),price_btc=\(.price_btc),\($volume)=\(.[$volume]),\($market)=\(.[$market])"' `
 
 	else
 		FIELDS=`echo $CMC_OUTPUT | jq -r --arg crypto "$CRYPTO" '.[] | select (.symbol==$crypto) | "price_usd=\(.price_usd),price_btc=\(.price_btc),24h_volume_usd=\(."24h_volume_usd"),market_cap_usd=\(.market_cap_usd)"'  `
-		echo "$CRYPTO"
-		echo "$FIELDS"
 
 	fi
 	LINE="${MEASUREMENT},${TAGS} ${FIELDS},${WTM_FIELDS}"
