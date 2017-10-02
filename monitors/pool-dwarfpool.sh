@@ -43,7 +43,7 @@ else
 
         while read AMOUNT _DATE; do
 		DATE_EPOCH=`date --date="${_DATE}" +%s`
-		LINE="${MEASUREMENT},${TAGS} ${AMOUNT} ${DATE_EPOCH}000000"
+		LINE="${MEASUREMENT},${TAGS} ${AMOUNT} ${DATE_EPOCH}000000000"
 		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
         done <<< "$FIELDS_AND_DATE"
 fi

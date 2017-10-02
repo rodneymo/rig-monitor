@@ -9,7 +9,7 @@ cd $BASE_DIR
 #Current time
 TIME=`date +%s%N`
 
-
+unset $DATA_BINARY
 
 if [ -f ${BASE_DIR}/run/PROFIT_LOCK ]; then
     	echo "profit calculator process still running! Exiting..."
@@ -60,12 +60,12 @@ do
 		echo "calculating profitability from ${LAST_RECORD} until ${TIME} (now)"
 	fi
 	if [[ "$POOL_TYPE" == "MPOS" ]]; then
-		PAYMENT_RECORDS_SQL="select amount from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"'"
-		PAYMENT_RECORDS=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${PAYMENT_RECORDS_SQL}" \
+		REVENUE_24H_SQL="select amount from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"'"
+		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${PAYMENT_RECORDS_SQL}" \
 			| jq -r '.results[0].series[0].values[] | "date=\(.[0]),revenue=\(.[1])"' `
 	else
-		PAYMENT_RECORDS_SQL="select sum(amount) from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"' group by time(24h)"
-		PAYMENT_RECORDS=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${PAYMENT_RECORDS_SQL}" \
+		REVENUE_24H_SQL="select sum(amount) from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"' group by time(24h)"
+		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${PAYMENT_RECORDS_SQL}" \
 			| jq -r '.results[0].series[0].values[] | "revenue=\(.[1]) \(.[0])"' `
 	fi
 	MEASUREMENT="revenue"
@@ -76,7 +76,7 @@ do
 			echo "$LINE"
 		fi 
 		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
-	done <<< "$PAYMENT_RECORDS"
+	done <<< "$REVENUE_24H"
 
 done
 
