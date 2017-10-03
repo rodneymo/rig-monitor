@@ -39,32 +39,36 @@ for POOL_LINE in "${POOL_LIST[@]}"
 do
 	IFS=$',' read POOL_TYPE CRYPTO LABEL BASE_API_URL API_TOKEN WALLET_ADDR <<<${POOL_LINE}
 	if (( DEBUG == 1 )); then
+		echo ""
 		echo "Pool info in conf file: $POOL_TYPE $CRYPTO $LABEL"
 	fi
 
-	# Query coin price in BTC and QUOTE CURRENCY as defined in the conf file
-	COIN_PRICE_SQL="select * from coin_data where crypto='"${CRYPTO}"'"
-	COIN_PRICE=`curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${COIN_PRICE_SQL}" `
-	if (( DEBUG == 1 )); then
-		echo "SQL: ${COIN_PRICE_SQL}"
-		echo "OUTPUT: ${COIN_PRICE}"
-	fi
 	PRICE="price_${QUOTE_CURRENCY,,}"
 	VOLUME="24h_volume_${QUOTE_CURRENCY,,}"
 	MARKET="market_cap_${QUOTE_CURRENCY,,}"
 
-	c_data=($(echo $COIN_PRICE | jq -r --arg price $PRICE --arg volume $VOLUME --arg market $MARKET '.results[0].series[0].values[0] | "\(.[7]) \(.[8]) \(.[6]) \(.[1]) \(.[2]) \(.[3]) \(.[5])" '))
-	echo "${c_data[@]}"
+	# Query coin price in BTC and QUOTE CURRENCY as defined in the conf file
+	COIN_DATA_SQL="select * from coin_data where crypto='"${CRYPTO}"'"
+	COIN_DATA=`curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode \
+		"q=${COIN_DATA_SQL}" | jq -r '.results[0].series[0].values[0] | "\(.[1]) \(.[2]) \(.[3]) \(.[5]) \(.[6]) \(.[7]) \(.[8]) \(.[9])" ' `
+	if (( DEBUG == 1 )); then
+		echo "SQL: ${COIN_DATA_SQL}"
+		echo "OUTPUT: ${COIN_DATA}"
+	fi
+
+	IFS=$' ' read VOLUME_24H_QC BLOCK_REWARD BLOCK_TIME DIFFICULTY MARKET_CAP_QC PRICE_BTC PRICE_QC QUOTE_CURRENCY <<<${COIN_DATA}
+
+	if (( DEBUG == 1 )); then
+		echo -e "VOLUME_24H_QC:$VOLUME_24H_QC\nBLOCK_REWARD:$BLOCK_REWARD\nBLOCK_TIME:$BLOCK_TIME\nDIFFICULTY:$DIFFICULTY\nMARKET_CAP_QC:$MARKET_CAP_QC\nPRICE_BTC:$PRICE_BTC\nPRICE_QC:$PRICE_QC\nQUOTE_CURRENCY:$QUOTE_CURRENCY"
+	fi
 	
-	continue
-		
 	# Aggregate pool payments in 24h periods
 	LAST_RECORD_SQL="SELECT last(revenue) from profitability where label='"${LABEL}"'"
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${LAST_RECORD_SQL}"
 	fi
-	LAST_RECORD=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${LAST_RECORD_SQL}" \
-		| jq -r '.results[0].series[0].values[0][0]' | awk '/^null/ { print 0 }; /[0-9]+/ {print substr($1,1,10) };' `
+	LAST_RECORD=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode \
+		"q=${LAST_RECORD_SQL}" | jq -r '.results[0].series[0].values[0][0]' | awk '/^null/ { print 0 }; /[0-9]+/ {print substr($1,1,10) };' `
 	if (( LAST_RECORD == 0 )); then
 		# Get epoch from 1 month ago and round it to 12:00am
 		_TIME=`date -d "1 month ago" +%s`
@@ -75,22 +79,27 @@ do
 	fi
 	if [[ "$POOL_TYPE" == "MPOS" ]]; then
 		REVENUE_24H_SQL="select amount from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"'"
-		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${REVENUE_24H_SQL}" \
-			| jq -r '.results[0].series[0].values[] | "date=\(.[0]),revenue=\(.[1])"' `
+		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" \
+			--data-urlencode "q=${REVENUE_24H_SQL}" | jq -r '.results[0].series[0].values[] | "\(.[0]) \(.[1])"' |  sed -e 's/null/0/g' `
 	else
 		REVENUE_24H_SQL="select sum(amount) from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"' group by time(24h)"
-		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${REVENUE_24H_SQL}" \
-			| jq -r '.results[0].series[0].values[] | "revenue=\(.[1]) \(.[0])"' `
+		REVENUE_24H=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" \
+			--data-urlencode "q=${REVENUE_24H_SQL}" | jq -r '.results[0].series[0].values[] | "\(.[0]) \(.[1])"' | sed -e 's/null/0/g' ` 
 	fi
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${REVENUE_24H_SQL}"
-		echo "OUTPUT: ${REVENUE_24H}"
+		echo "OUTPUT (DATE REVENUE): ${REVENUE_24H}"
 	fi
-
-	MEASUREMENT="revenue"
+	#VOLUME_24H_QC BLOCK_REWARD BLOCK_TIME DIFFICULTY MARKET_CAP_QC PRICE_BTC PRICE_QC QUOTE_CURRENCY
+	MEASUREMENT="pool_profitability"
 	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL}"
-	while read -r FIELDS_AND_TIME;do 
-		LINE="${MEASUREMENT},${TAGS} ${FIELDS_AND_TIME}"
+	while read  _DATE _REVENUE;do 
+		if [[ "$POOL_TYPE" == "ETHERMINE" ]]; then
+			_REVENUE=`echo "print ${_REVENUE}/1E18"|python`
+		fi
+		REVENUE_BTC=`echo "print ${_REVENUE}*${PRICE_BTC}"|python`  
+		REVENUE_QC=`echo "print ${_REVENUE}*${PRICE_QC}"|python`  
+		LINE="${MEASUREMENT},${TAGS} ${_REVENUE},${REVENUE_BTC},${REVENUE_QC} ${_DATE}"
 		if (( DEBUG == 1 )); then
 			echo "$LINE"
 		fi 
