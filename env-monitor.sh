@@ -36,7 +36,7 @@ SAVEIFS=$IFS
 for RIG_LINE in "${RIG_LIST[@]}"
 do
         IFS=$',' read RIG_ID MINER COIN_LABEL DCOIN_LABEL RIG_IP INSTALLED_GPUS TARGET_HR_ETH TARGET_HR_DCOIN PLUG_TYPE PLUG_IP MAX_POWER MAX_TEMP <<<${RIG_LINE}
-	echo "collecting data from $RIG_NAME..."
+	echo "collecting data from $RIG_ID..."
 
 	if (( DEBUG == 1 )); then
 		echo "rig info in conf file: $RIG_LINE"

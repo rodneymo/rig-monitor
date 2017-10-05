@@ -89,13 +89,13 @@ fi
 
 ############ Query payouts ############
 PAYMENTS_URL="${BASE_API_URL}/miner/${WALLET_ADDR}/payouts"
-LAST_RECORD_SQL="SELECT last(amount) from pool_payments where label='"${LABEL}"'"
-LAST_RECORD=`curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode "q=${LAST_RECORD_SQL}" | jq -r '.results[0].series[0].values[0][0]' | awk '/^null/ { print 0 }; /[0-9]+/ {print substr($1,1,10) };' `
+SQL="SELECT last(amount) from pool_payments where label='"${LABEL}"'"
+LAST_RECORD=$(get_last_record "$SQL")
 PAYMENT_OUTPUTS=`curl -s "${PAYMENTS_URL}" | jq --arg LAST_RECORD $LAST_RECORD -r '.data[]? | select (.paidOn > ($LAST_RECORD | tonumber))'`
 
 if (( DEBUG == 1 )); then
 	echo "Last ingested record: ${LAST_RECORD}"
-	echo "curl \"$PAYMENTS_URL\""
+	echo "curl \"$PAYMENTS_URL\"| jq --arg LAST_RECORD" ${LAST_RECORD} "-r '.data[]? | select (.paidOn > ($LAST_RECORD | tonumber))'"
 	echo $PAYMENT_OUTPUTS 
 fi
 if [ "$PAYMENT_OUTPUTS" == "" ]; then

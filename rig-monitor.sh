@@ -18,6 +18,7 @@ fi
 for ARGUMENT in "$@"; do
         if [ "$ARGUMENT" == "-bt" ]; then
                 set -x
+		set -o functrace
         elif [ "$ARGUMENT" == "-d" ]; then
                 DEBUG=1
 	elif [[ $ARGUMENT =~ ^-r[0-9]+ ]]; then

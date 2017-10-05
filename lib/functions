@@ -30,3 +30,14 @@ bookkeeping () {
         fi      
 }       
 
+get_last_record () {
+        local LAST_RECORD=`curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode \
+                "q=$1" | jq -r '.results[0].series[0].values[0][0]'   `
+        if (( LAST_RECORD == 0 )); then
+                # Get epoch from 1 month ago and round it to 12:00am
+                _TIME=`date -d "1 month ago" +%s`
+                LAST_RECORD=$(( ${_TIME} - (${_TIME} % (24 * 60 * 60)) ))"000000000"
+        fi
+	echo ${LAST_RECORD} | awk '/[0-9]+/ {print substr($1,1,10) };'
+}
+
