@@ -47,7 +47,6 @@ fi
 if [ "$API_STATUS" == "false" ]; then
 	echo "NO DATA FOUND"
 else
-
 	MEASUREMENT="workers_stats"
 	WORKER_TAG_AND_FIELDS=`echo $GENERALINFO_OUTPUT | jq -r '.data | .workers | .[] | "worker_id=\(.id) avg_hr_24h=\(.avg_h24),hr=\(.hashrate),shares=\(.rating),lastshare=\(.lastShare)"' `
 	while read -r WORKER_TAG FIELDS; do
