@@ -38,6 +38,6 @@ get_last_record () {
                 _TIME=`date -d "1 month ago" +%s`
                 LAST_RECORD=$(( ${_TIME} - (${_TIME} % (24 * 60 * 60)) ))"000000000"
         fi
-	echo ${LAST_RECORD} | awk '/[0-9]+/ {print substr($1,1,10) };'
+	echo ${LAST_RECORD} | awk '/^null/ { print 0 }; /[0-9]+/ {print substr($1,1,10) };' 
 }
 

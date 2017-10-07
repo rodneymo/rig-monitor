@@ -61,7 +61,6 @@ if [ "$CMC_OUTPUT" == "" ]; then
         echo "coinmarketcap seems to be down"
 fi
 
-exit
 ############ parse and merge data ################
 for POOL_LINE in "${POOL_LIST[@]}"
 do

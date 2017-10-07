@@ -93,7 +93,8 @@ if (( DEBUG == 1 )); then
 	echo $WORKERS_OUTPUT  | jq -r '.'
 fi
 
-if [ "$WORKERS_OUTPUT" == "" ]; then
+API_STATUS=`echo $WORKERS_OUTPUT | jq -r '.data[]'`
+if [ "$WORKERS_OUTPUT" == "" ] || [ "$API_STATUS" == "" ] ; then
 	echo "NO DATA FOUND"
 else
 	MEASUREMENT="workers_stats"
