@@ -43,6 +43,19 @@ else
 	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 fi
 
+########### Query worker stats from existing generalinfo API call ############
+if [ "$API_STATUS" == "false" ]; then
+	echo "NO DATA FOUND"
+else
+	MEASUREMENT="workers_stats"
+	WORKER_TAG_AND_FIELDS=`echo $GENERALINFO_OUTPUT | jq -r '.data | .workers | .[] | "worker_id=\(.id) avg_hr_24h=\(.avg_h24),hr=\(.hashrate),shares=\(.rating),lastshare=\(.lastShare)"' `
+	while read -r WORKER_TAG FIELDS; do
+		TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},${WORKER_TAG}"
+		LINE="${MEASUREMENT},${TAGS} ${FIELDS} ${RUN_TIME}"
+		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
+	done<<< "$WORKER_TAG_AND_FIELDS"
+fi
+
 ############ Query network stats API ############
 # Query average block time
 AVERAGEBLOCKTIME_URL="${BASE_API_URL}/network/avgblocktime"
@@ -123,7 +136,7 @@ if [ "$PAYMENTS_OUTPUT" == "" ]; then
 else
 	MEASUREMENT="pool_payments"
 	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL}"
-	FIELDS_AND_TIME=`echo $PAYMENTS_OUTPUT | jq -r '. | "amount=\(.amount),txHash=\"\(.txHash)\" \(.date)000000000"'`
+	FIELDS_AND_TIME=`echo $PAYMENTS_OUTPUT | jq -r '. | "amount=\(.amount),txHash=\"\(.txHash)\",confirmed=\(.confirmed) \(.date)000000000"'`
 	while read -r _FIELD; do
 		LINE="${MEASUREMENT},${TAGS} ${_FIELD}"
 		RECORD_TIME=`echo ${LINE} | awk '{ print substr($NF,1,11) }' `
