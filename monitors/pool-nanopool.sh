@@ -159,9 +159,6 @@ if (( DEBUG == 1 )); then
 	echo "$DATA_BINARY"
 fi 
 
-echo "$DATA_BINARY" > tmp/nanopool-data.tmp
-curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary @tmp/nanopool-data.tmp
-
 IFS=$SAVEIFS
 
 

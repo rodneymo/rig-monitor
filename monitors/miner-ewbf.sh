@@ -59,8 +59,6 @@ else
 	     echo "$DATA_BINARY"
 	fi
 
-	#write out to influxdb
-	curl -s -i -m 5 -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
 fi
 
 

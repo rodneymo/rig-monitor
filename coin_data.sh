@@ -97,7 +97,9 @@ done
 if (( DEBUG == 1 )); then
 	echo "$DATA_BINARY"
 fi 
-curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
+
+echo "$DATA_BINARY" > tmp/coin_binary_data.tmp
+curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary @tmp/ethermine-data.tmp
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/COIN_LOCK 

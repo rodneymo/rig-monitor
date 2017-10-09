@@ -125,7 +125,8 @@ do
 done
 
 # Write to DB
-#curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
+echo "$DATA_BINARY" > tmp/profitability_binary_data.tmp
+#curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary @tmp/ethermine-data.tmp
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/PROFIT_LOCK 

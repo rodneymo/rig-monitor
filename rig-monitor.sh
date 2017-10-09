@@ -45,6 +45,9 @@ do
 	. ${BASE_DIR}/monitors/miner-${MINER,,}.sh
 done
 
+echo "$DATA_BINARY" > tmp/rig_binary_data.tmp
+curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary @tmp/ethermine-data.tmp
+
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/RIG_LOCK 
 
