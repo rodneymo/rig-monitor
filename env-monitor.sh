@@ -51,7 +51,7 @@ done
 IFS=$SAVEIFS
 
 echo "$DATA_BINARY" > tmp/env_binary_data.tmp
-curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary @tmp/ethermine-data.tmp
+curl -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/env_binary_data.tmp
 
 rm ${BASE_DIR}/run/ENV_LOCK 
 

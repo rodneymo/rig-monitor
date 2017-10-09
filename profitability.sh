@@ -50,12 +50,12 @@ do
 
 	############## Query coin price in BTC and QUOTE CURRENCY as defined in the conf file
 	COIN_DATA_SQL="select * from coin_data where crypto='"${CRYPTO}"'"
-	COIN_DATA=`curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode \
+	COIN_DATA=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" --data-urlencode \
 		"q=${COIN_DATA_SQL}" | jq -r '.results[0].series[0].values[0] | "\(.[1]) \(.[2]) \(.[3]) \(.[5]) \(.[6]) \(.[7]) \(.[8]) \(.[9])" ' `
 	IFS=$' ' read VOLUME_24H_QC BLOCK_REWARD BLOCK_TIME DIFFICULTY MARKET_CAP_QC PRICE_BTC PRICE_QC QUOTE_CURRENCY <<<${COIN_DATA}
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${COIN_DATA_SQL}"
-		echo "HTTP QUERY: curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode \"db=rigdata\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${COIN_DATA_SQL}\""
+		echo "HTTP QUERY: curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode \"db=${INFLUX_DB}\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${COIN_DATA_SQL}\""
 		echo "OUTPUT: ${COIN_DATA}"
 		echo -e "VOLUME_24H_QC:$VOLUME_24H_QC\nBLOCK_REWARD:$BLOCK_REWARD\nBLOCK_TIME:$BLOCK_TIME\nDIFFICULTY:$DIFFICULTY\nMARKET_CAP_QC:$MARKET_CAP_QC\nPRICE_BTC:$PRICE_BTC\nPRICE_QC:$PRICE_QC\nQUOTE_CURRENCY:$QUOTE_CURRENCY"
 	fi
@@ -71,33 +71,33 @@ do
 	# debug info
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${SQL}"
-		echo "HTTP QUERY: curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode \"db=rigdata\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${SQL}\""
+		echo "HTTP QUERY: curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode \"db=${INFLUX_DB}\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${SQL}\""
                 echo "LAST RECORD FROM SQL:${LAST_RECORD}"
 		echo "calculating profitability from ${LAST_RECORD} until ${TIME} (now)"
 	fi
 	### Query revenue per pool per 24h period
 	if [[ "$POOL_TYPE" == "MPOS" ]]; then
 		REVENUE_24H_SQL="select amount from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"'"
-		REVENUE_24H=`curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" \
+		REVENUE_24H=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" \
 			--data-urlencode "q=${REVENUE_24H_SQL}" | jq -r '.results[0].series[0].values[] | "\(.[0]) \(.[1])"' |  sed -e 's/null/0/g' `
 	else
 		REVENUE_24H_SQL="select sum(amount) from pool_payments where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"' group by time(24h)"
-		REVENUE_24H=`curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" \
+		REVENUE_24H=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" \
 			--data-urlencode "q=${REVENUE_24H_SQL}" | jq -r '.results[0].series[0].values[] | "\(.[0]) \(.[1])"' | sed -e 's/null/0/g' ` 
 	fi
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${REVENUE_24H_SQL}"
-		echo "HTTP QUERY: curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode \"db=rigdata\" --data-urlencode \"epoch=ns\" --data-urlencode q=\"$REVENUE_24H_SQL\""
+		echo "HTTP QUERY: curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode \"db=${INFLUX_DB}\" --data-urlencode \"epoch=ns\" --data-urlencode q=\"$REVENUE_24H_SQL\""
 		echo "OUTPUT (DATE REVENUE): ${REVENUE_24H}"
 	fi
 
 	### Query power consumption per 24h per aggregated per rig (kWh based on 1 measurement p/ min: sum(power_usage)/1400. Power usage:  sum(power_usage)/1400 * 24)
 	SQL="select sum(power_usage)/1440*24 from env_data where time >= $LAST_RECORD and time <= $TIME and pool_label='"${LABEL}"' group by time(24h)"
-        POWER_USAGE=`curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" \
+        POWER_USAGE=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" \
                         --data-urlencode "q=${SQL}" | jq -r '.results[0].series[0].values[] | "\(.[0]) \(.[1])"' |  sed -e 's/null/0/g' `
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${SQL}"
-		echo "HTTP QUERY: curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode \"db=rigdata\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${SQL}\""
+		echo "HTTP QUERY: curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode \"db=${INFLUX_DB}\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${SQL}\""
 	fi
 	declare -A POWER_COSTS_24H
 	while read _DATE _POWER_USAGE;do 
@@ -126,7 +126,7 @@ done
 
 # Write to DB
 echo "$DATA_BINARY" > tmp/profitability_binary_data.tmp
-#curl -i -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary @tmp/ethermine-data.tmp
+#curl -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/profitability_binary_data.tmp
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/PROFIT_LOCK 
