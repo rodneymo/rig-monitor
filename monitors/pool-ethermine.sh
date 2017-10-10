@@ -5,8 +5,6 @@
 # epoch RUN_TIME
 RUN_TIME=`date +%s%N`
 
-unset DATA_BINARY
-
 SAVEIFS=$IFS
 
 case "$CRYPTO"  in

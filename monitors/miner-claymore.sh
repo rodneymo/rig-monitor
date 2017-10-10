@@ -3,7 +3,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # epoch TIME
 TIME=`date +%s%N`
-unset DATA_BINARY
 
 # load and capture claymore's http status page 
 CLAYMORE_READOUT=`timeout 5s w3m -dump -cols 1000 http://${RIG_IP}:3333 | awk -vRS= 'END{print}'`

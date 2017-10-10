@@ -1,8 +1,6 @@
 #!/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-unset DATA_BINARY
-
 if (( DEBUG == 1 )); then
 	echo $RIG_ID, $MAX_POWER
 fi

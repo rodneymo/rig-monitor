@@ -6,6 +6,8 @@ cd $BASE_DIR
 . ${BASE_DIR}/conf/rig-monitor.conf
 . ${BASE_DIR}/lib/functions
 
+unset DATA_BINARY
+
 # epoch RUN_TIME
 RUN_TIME=`date +%s`
 

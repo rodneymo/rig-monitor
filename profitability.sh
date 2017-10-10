@@ -7,6 +7,8 @@ cd $BASE_DIR
 . ${BASE_DIR}/conf/rig-monitor.conf
 . ${BASE_DIR}/lib/functions 
 
+unset DATA_BINARY
+
 #Current time
 TIME=`date +%s%N`
 
