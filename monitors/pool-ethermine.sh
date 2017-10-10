@@ -76,7 +76,7 @@ API_STATUS=`echo $WORKERS_OUTPUT | jq -r '.status'`
 if [ "$API_STATUS" != "OK" ]; then
 	echo "NO DATA FOUND"
 else
-	MEASUREMENT="workers_stats"
+	MEASUREMENT="worker_stats"
 	WORKER_TAG_FIELDS_AND_TIME=`echo $WORKERS_OUTPUT | jq -r '.data[] | "worker_id=\(.worker) reported_hr=\(.reportedHashrate),current_hr=\(.currentHashrate),valid_shares=\(.validShares),invalid_shares=\(.invalidShares),stale_shares=\(.staleShares),avg_hr_24h=\(.averageHashrate) \(.time)000000000"' `
 	while read -r WORKER_TAG FIELDS W_TIME; do
 		TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},${WORKER_TAG}"
