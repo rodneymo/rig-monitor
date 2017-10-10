@@ -61,7 +61,7 @@ if [ "$WORKERS_OUTPUT" == "Access denied" ]; then
         echo "NO DATA FOUND"
 else
 	MEASUREMENT="worker_stats"
-	WORKER_TAG_AND_FIELDS=`echo $WORKERS_OUTPUT | jq -r '.getuserworkers.data[] | "worker_id=\(.username) current_hr=\(.hashrate)"' | sed -s 's/[0-9a-zA-Z]*\.//' `
+	WORKER_TAG_AND_FIELDS=`echo $WORKERS_OUTPUT | jq -r '.getuserworkers.data[] | "rig_id=\(.username) current_hr=\(.hashrate)"' | sed -s 's/[0-9a-zA-Z]*\.//' `
 	while read -r WORKER_TAG FIELDS; do
 		TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},${WORKER_TAG}"
 		LINE="${MEASUREMENT},${TAGS} ${FIELDS} ${DATE_EPOCH}000000000"

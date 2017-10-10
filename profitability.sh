@@ -11,6 +11,8 @@ unset DATA_BINARY
 
 #Current time
 TIME=`date +%s%N`
+TIME_1DAY_AGO=`date --date="-1 day" +%s%N`
+
 
 unset $DATA_BINARY
 
@@ -111,7 +113,7 @@ do
 		done <<< "$POWER_USAGE"
 	fi
 
-	#VOLUME_24H_QC BLOCK_REWARD BLOCK_TIME DIFFICULTY MARKET_CAP_QC PRICE_BTC PRICE_QC QUOTE_CURRENCY
+	# Collate revenue and costs into influx DB entries  
 	MEASUREMENT="pool_profitability"
 	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL}"
 	while read  _DATE _REVENUE;do 
@@ -127,11 +129,34 @@ do
 		fi 
 		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 	done <<< "$REVENUE_24H"
+
+
+	######## Query list of workers (per pool) and calculate future worker profitability based on current hashrate and power consumption
+	SQL="select sum(power_usage)/1440*24 from env_data where time >= $TIME_1DAY_AGO and time <= $TIME and label='"${LABEL}"' group by rig_id"
+	# POWER USAGE OUTPUT: rig_id time sum of power_usage
+        POWER_USAGE=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" \
+                        --data-urlencode "q=${SQL}" | jq -r '.results[0].series[] | "\(.tags.rig_id) \(.values[0][0]) \(.values[0][1])"' `
+	if (( DEBUG == 1 )); then
+		echo "SQL: ${SQL}"
+		echo "HTTP QUERY: curl -sG 'http://${INFLUX_HOST}:8086/query?pretty=true' --data-urlencode \"db=${INFLUX_DB}\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${SQL}\""
+		echo "$POWER_USAGE"
+	fi
+
+	SQL="select rig_id, last(avg_hr_24h) from worker_stats where time >= $TIME_1DAY_AGO and label='"${LABEL}"' group by rig_id"
+	# RIG_HR_LAST_24H OUTPUT: rig_id time avg_hr_24
+        RIG_HR_LAST_24H=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" \
+                        --data-urlencode "q=${SQL}" | jq -r '.results[0].series[] | "\(.tags.rig_id) \(.values[0][0]) \(.values[0][1])"' `
+	if (( DEBUG == 1 )); then
+		echo "SQL: ${SQL}"
+		echo "HTTP QUERY: curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode \"db=${INFLUX_DB}\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${SQL}\" "
+		echo "$RIG_HR_LAST_24H"
+	fi
+
 done
 
 # Write to DB
 echo "$DATA_BINARY" > tmp/profitability_binary_data.tmp
-curl -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/profitability_binary_data.tmp
+#curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/profitability_binary_data.tmp
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/PROFIT_LOCK 

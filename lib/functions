@@ -41,3 +41,10 @@ get_last_record () {
 	echo ${LAST_RECORD} | awk '/^null/ { print 0 }; /[0-9]+/ {print substr($1,1,10) };' 
 }
 
+convertsecs () {
+	((d=${1}/86400))
+	((h=${1}/3600))
+	((m=(${1}%3600)/60))
+	#((s=${1}%60))
+	printf "%01d days %02d:%02d\n" $d $h $m 
+}

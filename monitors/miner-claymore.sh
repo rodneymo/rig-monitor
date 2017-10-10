@@ -14,7 +14,7 @@ fi
 
 DATA_POINTS=`awk -f ${BASE_DIR}/awk/parse_claymore_status.awk \
 	-v time=${TIME} rig_id=${RIG_ID} coin=${COIN_LABEL} dcoin=${DCOIN_LABEL} installed_gpus=${INSTALLED_GPUS} \
-	target_hr_eth=${TARGET_HR_ETH} target_hr_dcoin=${TARGET_HR_DCOIN} \
+	target_hr_eth=${TARGET_HR} target_hr_dcoin=${TARGET_HR_DCOIN} \
 	<<< "$CLAYMORE_READOUT" `
 DATA_BINARY=`echo "${DATA_POINTS}" |  sed -e 's/[a-z0-9_]\+=,//g' -e 's/,[a-z0-9_]\+= $//g'`
 if (( DEBUG == 1 )); then

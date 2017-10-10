@@ -4,6 +4,7 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd $BASE_DIR
 
 . ${BASE_DIR}/conf/rig-monitor.conf
+. lib/functions
 
 unset DATA_BINARY
 
@@ -38,7 +39,7 @@ SAVEIFS=$IFS
 # Call appropriate rig script
 for RIG_LINE in "${RIG_LIST[@]}"
 do
-	IFS=$',' read RIG_ID MINER COIN_LABEL DCOIN_LABEL POOL_LABEL POOL_LABEL_DCOIN RIG_IP INSTALLED_GPUS TARGET_HR_ETH TARGET_HR_DCOIN PLUG_TYPE PLUG_IP MAX_POWER MAX_TEMP <<<${RIG_LINE}
+	IFS=$',' read RIG_ID MINER COIN_LABEL DCOIN_LABEL POOL_LABEL POOL_LABEL_DCOIN RIG_IP INSTALLED_GPUS TARGET_HR TARGET_HR_DCOIN PLUG_TYPE PLUG_IP MAX_POWER MAX_TEMP <<<${RIG_LINE}
 	echo "collecting data from $RIG_ID..."
 
 	if (( DEBUG == 1 )); then
