@@ -94,7 +94,7 @@ do
 	fi
 
 	### Query power consumption per 24h per aggregated per rig (kWh based on 1 measurement p/ min: sum(power_usage)/1400. Power usage:  sum(power_usage)/1400 * 24)
-	SQL="select sum(power_usage)/1440*24 from env_data where time >= $LAST_RECORD and time <= $TIME and pool_label='"${LABEL}"' group by time(24h)"
+	SQL="select sum(power_usage)/1440*24 from env_data where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"' group by time(24h)"
         POWER_USAGE=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" \
                         --data-urlencode "q=${SQL}" | jq -r '.results[0].series[0].values[] | "\(.[0]) \(.[1])"' |  sed -e 's/null/0/g' `
 	if (( DEBUG == 1 )); then
@@ -128,7 +128,7 @@ done
 
 # Write to DB
 echo "$DATA_BINARY" > tmp/profitability_binary_data.tmp
-#curl -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/profitability_binary_data.tmp
+curl -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/profitability_binary_data.tmp
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/PROFIT_LOCK 

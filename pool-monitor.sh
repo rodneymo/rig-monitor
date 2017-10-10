@@ -48,7 +48,7 @@ done
 IFS=$SAVEIFS
 
 echo "$DATA_BINARY" > tmp/pool_binary_data.tmp
-# curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/pool_binary_data.tmp
+curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/pool_binary_data.tmp
 
 rm ${BASE_DIR}/run/POOL_LOCK 
 
