@@ -96,18 +96,20 @@ do
 	### Query power consumption per 24h per aggregated per rig (kWh based on 1 measurement p/ min: sum(power_usage)/1400. Power usage:  sum(power_usage)/1400 * 24)
 	SQL="select sum(power_usage)/1440*24 from env_data where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"' group by time(24h)"
         POWER_USAGE=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" \
-                        --data-urlencode "q=${SQL}" | jq -r '.results[0].series[0].values[] | "\(.[0]) \(.[1])"' |  sed -e 's/null/0/g' `
+                        --data-urlencode "q=${SQL}" | jq -r '.results[0].series[0].values[]? | "\(.[0]) \(.[1])"' |  sed -e 's/null/0/g' `
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${SQL}"
 		echo "HTTP QUERY: curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode \"db=${INFLUX_DB}\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${SQL}\""
 	fi
-	declare -A POWER_COSTS_24H
-	while read _DATE _POWER_USAGE;do 
-		POWER_COSTS_24H[$_DATE]=`awk "BEGIN {print $_POWER_USAGE * $PWR_COSTS}"`
-		if (( DEBUG == 1 )); then
-			echo "DATE:${_DATE}, POWER USAGE:${_POWER_USAGE}, POWER COSTS:${POWER_COSTS_24H[$_DATE]}"
-		fi
-	done <<< "$POWER_USAGE"
+	if [ ! -z "$POWER_USAGE" ];then
+		declare -A POWER_COSTS_24H
+		while read _DATE _POWER_USAGE;do 
+			POWER_COSTS_24H[$_DATE]=`awk "BEGIN {print $_POWER_USAGE * $PWR_COSTS}"`
+			if (( DEBUG == 1 )); then
+				echo "DATE:${_DATE}, POWER USAGE:${_POWER_USAGE}, POWER COSTS:${POWER_COSTS_24H[$_DATE]}"
+			fi
+		done <<< "$POWER_USAGE"
+	fi
 
 	#VOLUME_24H_QC BLOCK_REWARD BLOCK_TIME DIFFICULTY MARKET_CAP_QC PRICE_BTC PRICE_QC QUOTE_CURRENCY
 	MEASUREMENT="pool_profitability"
@@ -118,7 +120,8 @@ do
 		fi
 		REVENUE_BTC=`awk "BEGIN {print $_REVENUE*$PRICE_BTC}"`  
 		REVENUE_QC=`awk "BEGIN {print $_REVENUE*$PRICE_QC}"`  
-		LINE="${MEASUREMENT},${TAGS} ${_REVENUE},${REVENUE_BTC},${REVENUE_QC},${POWER_COSTS_24H[${_DATE}]} ${_DATE}"
+		# Default value added to power_costs_24h in case no rigs are marked as using current pool and thus POWER_USAGE would be empty
+		LINE="${MEASUREMENT},${TAGS} revenue_24h=${_REVENUE},revenue_btc_24h=${REVENUE_BTC},revenue_qc_24h=${REVENUE_QC},power_costs_24h=${POWER_COSTS_24H[${_DATE}]:-0} ${_DATE}"
 		if (( DEBUG == 1 )); then
 			echo "$LINE"
 		fi 
