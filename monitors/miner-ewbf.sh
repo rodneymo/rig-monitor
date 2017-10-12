@@ -18,11 +18,10 @@ if (( DEBUG == 1 )); then
 	echo "$TIME $EWBF_READOUT"
 fi
 
-
 # parse miner output, prepare data for influxdb ingest and filter out null tags, fields
 if [ "$EWBF_READOUT" == "" ]; then
 	echo "CURL FAILED"
-	DATA_BINARY="miner_system_ewbf,rig_id=${RIG_ID},coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS}i,active_gpus=-1i,target_hr=${TARGET_HR},total_hr=-1,max_power=${MAX_POWER}" 
+	DATA_BINARY="miner_system,rig_id=${RIG_ID},miner=ewbf,coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS}i,active_gpus=-1i,target_hr=${TARGET_HR},total_hr=-1,max_power=${MAX_POWER}" 
 	curl -s -i -m 5 -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
 
 else
@@ -38,7 +37,7 @@ else
 
 
         DATA_POINTS_GPU=`awk -v RIGNAME=${RIG_ID} -v coin=${COIN_LABEL} -F"," \
-		        '{print "miner_gpu_ewbf,rig_id="RIGNAME",gpu_id="$1",gpu_specs="$8",coin=ZEC "\
+		        '{print "miner_gpu,rig_id="RIGNAME",gpu_id="$1",gpu_specs="$8",coin=ZEC "\
 		        "gpu_hr="$2",gpu_shares="$3"i,gpu_rej_shares="$4"i,gpu_temp="$5"i,gpu_power="$6"i,gpu_status="$7"i"}' \
 			<<< "$DATA_POINTS_GPU_CSV"`
 
@@ -49,7 +48,7 @@ else
 	RIG_REJ=`awk -F"," '{x+=$4}END{print x}' <<< "$DATA_POINTS_GPU_CSV"`
 	RIG_POWER=`awk -F"," '{x+=$6}END{print x}' <<< "$DATA_POINTS_GPU_CSV"`
 	RIG_UPTIME=`awk -F"," -v TIME=${TIME} '{printf "%i",TIME-$1}' <<< "$RIG_START"`
-	DATA_POINTS_RIG="miner_system_ewbf,rig_id=${RIG_ID},coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS}i,active_gpus=${RIG_GPU_HEALTH}i,target_hr=${TARGET_HR},total_hr=${RIG_HR},total_shares=${RIG_SHARES}i,rej_shares=${RIG_REJ}i,max_power=${MAX_POWER},power_usage=${RIG_POWER},mining_time=${RIG_UPTIME}i"
+	DATA_POINTS_RIG="miner_system,rig_id=${RIG_ID},miner=ewbf,coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS}i,active_gpus=${RIG_GPU_HEALTH}i,target_hr=${TARGET_HR},total_hr=${RIG_HR},total_shares=${RIG_SHARES}i,rej_shares=${RIG_REJ}i,max_power=${MAX_POWER},power_usage=${RIG_POWER},mining_time=${RIG_UPTIME}i"
 
 	DATA_POINTS=${DATA_POINTS_RIG}$'\n'${DATA_POINTS_GPU}
 

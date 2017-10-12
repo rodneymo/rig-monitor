@@ -13,12 +13,10 @@ fi
 # check if no response from w3m
 if [ "$CLAYMORE_READOUT" == "" ]; then
         echo "w3m FAILED"
-        DATA_BINARY="miner_system_claymore,rig_id=${RIG_ID},coin=${COIN_LABEL},dcoin=${DCOIN_LABEL},miner=claymore installed_gpus=${INSTALLED_GPUS},active_gpus=-1,target_hr=${TARGET_HR},total_hr=-1,total_hr_dcoin=-1,target_hr_dcoin=${TARGET_HR_DCOIN}"
+        DATA_BINARY="miner_system,rig_id=${RIG_ID},miner=claymore,coin=${COIN_LABEL},dcoin=${DCOIN_LABEL} installed_gpus=${INSTALLED_GPUS},active_gpus=-1,target_hr=${TARGET_HR},total_hr=-1,total_hr_dcoin=-1,target_hr_dcoin=${TARGET_HR_DCOIN}"
         #curl -s -i -m 5 -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
 else
-
-
-# parse miner output, prepare data for influxdb ingest and filter out null tags, fields
+	# parse miner output, prepare data for influxdb ingest and filter out null tags, fields
 
 	DATA_POINTS=`awk -f ${BASE_DIR}/awk/parse_claymore_status.awk \
 		-v time=${TIME} rig_id=${RIG_ID} coin=${COIN_LABEL} dcoin=${DCOIN_LABEL} installed_gpus=${INSTALLED_GPUS} \
