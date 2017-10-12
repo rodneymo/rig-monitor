@@ -172,7 +172,7 @@ END {
         print "miner_system,rig_id=" rig_id ",miner=claymore,coin=" coin ",dcoin=" dcoin " " "installed_gpus=" installed_gpus ",active_gpus=" NUM_GPUS ",target_hr="target_hr ",total_hr=" total_hr",avg_hr_1m=" avg_hr_1m ",total_shares=" total_shares ",rej_shares=" rej_shares ",target_hr_dcoin=" target_hr_dcoin ",total_hr_dcoin=" total_hr_dcoin ",avg_hr_1m_dcoin=" avg_hr_1m_dcoin ",total_shares_dcoin=" total_shares_dcoin ",rej_shares_dcoin=" rej_shares_dcoin ",mining_time=\"" mining_time "\""
 
         for ( gpu_id = 0; gpu_id < NUM_GPUS; gpu_id++ ) {
-        	print "miner_gpu,rig_id=" rig_id ",gpu_id=" gpu_id ",gpu_specs=" gpu[gpu_id,"SPECS"] " " "gpu_hr=" gpu[gpu_id,"HR"] ",gpu_shares=" gpu[gpu_id,"SHARES"] ",gpu_inc_shares=" gpu[gpu_id,"INC_SHARES"] ",gpu_hr_dcoin=" gpu[gpu_id,"HR_DCOIN"] ",gpu_shares_dcoin=" gpu[gpu_id,"SHARES_DCOIN"] ",gpu_inc_shares_dcoin="  gpu[gpu_id,"INC_SHARES_DCOIN"] ",gpu_max_temp=" gpu_max_temp ",gpu_temp=" gpu[gpu_id,"TEMP"] ",gpu_fan=" gpu[gpu_id,"FAN"]
+        	print "miner_gpu,rig_id=" rig_id ",miner=claymore,gpu_id=" gpu_id ",gpu_specs=" gpu[gpu_id,"SPECS"] " " "gpu_hr=" gpu[gpu_id,"HR"] ",gpu_shares=" gpu[gpu_id,"SHARES"] ",gpu_inc_shares=" gpu[gpu_id,"INC_SHARES"] ",gpu_hr_dcoin=" gpu[gpu_id,"HR_DCOIN"] ",gpu_shares_dcoin=" gpu[gpu_id,"SHARES_DCOIN"] ",gpu_inc_shares_dcoin="  gpu[gpu_id,"INC_SHARES_DCOIN"] ",gpu_max_temp=" gpu_max_temp ",gpu_temp=" gpu[gpu_id,"TEMP"] ",gpu_fan=" gpu[gpu_id,"FAN"]
         }
 	
 	if (TRACE != 0) { 
