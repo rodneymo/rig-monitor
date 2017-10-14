@@ -47,11 +47,11 @@ do
 	fi
 	. ${BASE_DIR}/monitors/miner-${MINER,,}.sh
 
-	# write out each rig to database
-	echo "$DATA_BINARY" > tmp/rig_binary_data.tmp
-	curl -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/rig_binary_data.tmp
 done
 
+# write out each rig to database
+echo "$DATA_BINARY" > tmp/rig_binary_data.tmp
+curl -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/rig_binary_data.tmp
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/RIG_LOCK 

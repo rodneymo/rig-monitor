@@ -22,11 +22,12 @@ else
 		-v time=${TIME} rig_id=${RIG_ID} coin=${COIN_LABEL} dcoin=${DCOIN_LABEL} installed_gpus=${INSTALLED_GPUS} \
 		target_hr_eth=${TARGET_HR} target_hr_dcoin=${TARGET_HR_DCOIN} \
 		<<< "$CLAYMORE_READOUT" `
-	DATA_BINARY=`echo "${DATA_POINTS}" |  sed -e 's/[a-z0-9_]\+=,//g' -e 's/,[a-z0-9_]\+= $//g'`
+	LINE=`echo "${DATA_POINTS}" |  sed -e 's/[a-z0-9_]\+=,//g' -e 's/,[a-z0-9_]\+= $//g'`
+	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 fi
 
 if (( DEBUG == 1 )); then
-        echo "$DATA_BINARY"
+        echo "$LINE"
 fi
 
 IFS=$SAVEIFS

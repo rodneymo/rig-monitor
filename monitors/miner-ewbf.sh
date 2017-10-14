@@ -52,10 +52,11 @@ else
 
 	DATA_POINTS=${DATA_POINTS_RIG}$'\n'${DATA_POINTS_GPU}
 
-	DATA_BINARY=`echo "${DATA_POINTS}" |  sed -e 's/[a-z0-9_]\+=,//g' -e 's/,[a-z0-9_]\+= $//g'`
+	LINE=`echo "${DATA_POINTS}" |  sed -e 's/[a-z0-9_]\+=,//g' -e 's/,[a-z0-9_]\+= $//g'`
+	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 
 	if (( DEBUG == 1 )); then
-	     echo "$DATA_BINARY"
+	     echo "$LINE"
 	fi
 
 fi

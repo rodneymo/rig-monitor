@@ -36,5 +36,5 @@ else
 fi
 
 if (( DEBUG == 1 )); then
-	echo "$DATA_BINARY"
+	echo "$LINE"
 fi
