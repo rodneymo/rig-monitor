@@ -16,6 +16,7 @@ if (( CONNECTION_ERROR == 0 ));then
 	if (( DEBUG == 1 )); then
 		echo "$SGMINER_READOUT"
 	fi
+
 	FIELDS=`echo $SGMINER_READOUT | jq -r '.summary[0].SUMMARY[0] | "hr_avg=\(."MHS av"),total_shares=\(.Accepted),rej_shares=\(.Rejected),stale_shares=\(.Stale),hw_errors=\(."Hardware Errors")"'`
 	_MINING_TIME=`echo $SGMINER_READOUT | jq -r '.summary[0].SUMMARY[0].Elapsed'` 
 	MINING_TIME=$(convertsecs $_MINING_TIME)
@@ -32,7 +33,6 @@ if (( CONNECTION_ERROR == 0 ));then
 else
 	LINE="miner_system,rig_id=${RIG_ID},miner=sgminer,coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS},active_gpus=-1,target_hr=${TARGET_HR},total_hr=-1 $TIME"
 	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
-
 fi
 
 if (( DEBUG == 1 )); then

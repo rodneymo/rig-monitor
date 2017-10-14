@@ -95,7 +95,7 @@ do
 		echo "OUTPUT (DATE REVENUE): ${REVENUE_24H}"
 	fi
 
-	### Query power consumption per 24h per aggregated per rig (kWh based on 1 measurement p/ min: sum(power_usage)/1400. Power usage:  sum(power_usage)/1400 * 24)
+	### Query power consumption per 24h for all rigs using POOL (kWh based on minute env_data.sh measurements: Power usage:  sum(power_usage)/1400 * 24)
 	SQL="select sum(power_usage)/1440*24 from env_data where time >= $LAST_RECORD and time <= $TIME and label='"${LABEL}"' group by time(24h)"
         POWER_USAGE=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" \
                         --data-urlencode "q=${SQL}" | jq -r '.results[0].series[0].values[]? | "\(.[0]) \(.[1])"' |  sed -e 's/null/0/g' `
@@ -103,6 +103,7 @@ do
 		echo "SQL: ${SQL}"
 		echo "HTTP QUERY: curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode \"db=${INFLUX_DB}\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${SQL}\""
 	fi
+	# if power usage wuery not zero then calc power costs and store them in array
 	if [ ! -z "$POWER_USAGE" ];then
 		declare -A POWER_COSTS_24H
 		while read _DATE _POWER_USAGE;do 
