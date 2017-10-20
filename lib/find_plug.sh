@@ -2,8 +2,8 @@
 #Scan IP network for TP LINK plugs and print alias, IP
 
 NETWORK="192.168.1.0"
-START_IP=0
-END_IP=80
+START_IP=80
+END_IP=100
 PORT=9999
 
 S_NETWORK=${NETWORK%.*}
