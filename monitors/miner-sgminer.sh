@@ -17,7 +17,7 @@ if (( CONNECTION_ERROR == 0 ));then
 		echo "$SGMINER_READOUT"
 	fi
 
-	FIELDS=`echo $SGMINER_READOUT | jq -r '.summary[0].SUMMARY[0] | "hr_avg=\(."MHS av"),total_shares=\(.Accepted),rej_shares=\(.Rejected),stale_shares=\(.Stale),hw_errors=\(."Hardware Errors")"'`
+	FIELDS=`echo $SGMINER_READOUT | jq -r '.summary[0].SUMMARY[0] | "total_hr=\(."MHS 5s"),total_shares=\(.Accepted),rej_shares=\(.Rejected),stale_shares=\(.Stale),hw_errors=\(."Hardware Errors")"'`
 	_MINING_TIME=`echo $SGMINER_READOUT | jq -r '.summary[0].SUMMARY[0].Elapsed'` 
 	MINING_TIME=$(convertsecs $_MINING_TIME)
 	NUM_GPUS=`echo $SGMINER_READOUT | jq -r '.devs[0].STATUS[0].Msg' | sed -e 's/ .*$//'`
