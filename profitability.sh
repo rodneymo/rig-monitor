@@ -106,7 +106,7 @@ do
 	if [ ! -z "$POWER_USAGE" ];then
 		declare -A POWER_COSTS_24H
 		while read _DATE _POWER_USAGE;do 
-			POWER_COSTS_24H[$_DATE]=`awk "BEGIN {print $_POWER_USAGE * $PWR_COSTS}"`
+			POWER_COSTS_24H[$_DATE]=`awk "BEGIN {print $_POWER_USAGE/1000 * $PWR_COSTS}"`
 			if (( DEBUG == 1 )); then
 				echo "DATE:${_DATE}, POWER USAGE:${_POWER_USAGE}, POWER COSTS:${POWER_COSTS_24H[$_DATE]}"
 			fi
@@ -133,17 +133,29 @@ do
 
 	######## Query list of workers (per pool) and calculate future worker profitability based on current hashrate and power consumption
 	### Claculate power usage during the last 24h
-	SQL="select rig_id,mean(power_usage) from env_data where time >= $TIME_1DAY_AGO and time <= $TIME and label='"${LABEL}"' group by rig_id"
+	SQL="select mean(power_usage) from env_data where time >= $TIME_1DAY_AGO and time <= $TIME and label='"${LABEL}"' group by rig_id"
         POWER_USAGE=`curl -sG 'http://'${INFLUX_HOST}':8086/query?pretty=true' --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" \
-                        --data-urlencode "q=${SQL}" | jq -r '.results[0].series[]? | "\(.tags.rig_id) \(.values[0][0]) \(.values[0][1])"' `
+                        --data-urlencode "q=${SQL}" | jq -r '.results[0].series[]? | "\(.tags.rig_id) \(.values[0][1])"' `
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${SQL}"
 		echo "HTTP QUERY: curl -sG 'http://${INFLUX_HOST}:8086/query?pretty=true' --data-urlencode \"db=${INFLUX_DB}\" --data-urlencode \"epoch=ns\" --data-urlencode \"q=${SQL}\""
 		echo "$POWER_USAGE"
 	fi
+	# if power usage query was not zero then store results in array
+	if [ ! -z "$POWER_USAGE" ];then
+		declare -A F_POWER_COSTS_24H
+		while read _RIG_ID _POWER_USAGE;do 
+			F_POWER_COSTS_24H[$_RIG_ID]=`awk "BEGIN {print $_POWER_USAGE/1000*24 * $PWR_COSTS}"`
+			if (( DEBUG == 1 )); then
+				echo "RIG_ID:${_RIG_ID}, POWER USAGE:${_POWER_USAGE}, POWER COSTS:${F_POWER_COSTS_24H[$_RIG_ID]}"
+			fi
+		done <<< "$POWER_USAGE"
+	fi
 	### Estimate future revenue per rig based on block reward, block mining time and network difficulty
 	if [[ "$POOL_TYPE" == "MPOS" ]]; then
 		SQL="select mean(current_hr) from worker_stats where time >= $TIME_1DAY_AGO and label='"${LABEL}"' group by rig_id"
+	elif [[ "$POOL_TYPE" == "CRYPTONOTE" ]]; then
+		SQL="select mean(hr) from worker_stats where time >= $TIME_1DAY_AGO and label='"${LABEL}"' group by rig_id"
 	else
 		SQL="select mean(avg_hr_24h) from worker_stats where time >= $TIME_1DAY_AGO and label='"${LABEL}"' group by rig_id"
 	fi
@@ -158,11 +170,17 @@ do
 		if [[ -z $_HR ]]; then
 			_HR=0
 		fi
-		EARNINGS_DAY=`awk "BEGIN {print ($_HR/($DIFFICULTY/$BLOCK_TIME))*((60/$BLOCK_TIME)*$BLOCK_REWARD)*(60*24)*($PRICE_QC)}"`
+		EST_EARNINGS_DAY=`awk "BEGIN {print ($_HR/($DIFFICULTY/$BLOCK_TIME))*((60/$BLOCK_TIME)*$BLOCK_REWARD)*(60*24)*($PRICE_QC)}"`
+		EST_POWER_COSTS_DAY=${F_POWER_COSTS_24H[${_RIG_ID}]}
+		EST_PROFIT_DAY=`awk "BEGIN {print ($EST_EARNINGS_DAY-$EST_POWER_COSTS_DAY)}"`
 
+		MEASUREMENT="future_profitability"
+		TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},rig_id=${_RIG_ID}"
+		LINE="${MEASUREMENT},${TAGS} est_revenue_qc_24h=${EST_EARNINGS_DAY},est_power_costs_24h=${EST_POWER_COSTS_DAY},est_profit_24h=${EST_PROFIT_DAY} ${TIME}"
+		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 		if (( DEBUG == 1 )); then
 			echo "EARNINGS PER DAY CALC: ($_HR/($DIFFICULTY/$BLOCK_TIME))*((60/$BLOCK_TIME)*$BLOCK_REWARD)*(60*24)*($PRICE_QC)"
-			echo "RIG_ID: $_RIG_ID, EARNINGS PER DAY: $EARNINGS_DAY $QUOTE_CURRENCY"
+			echo "$LINE"
 		fi
 
 	done  <<<"${RIG_HR_LAST_24H}"
@@ -171,7 +189,7 @@ done
 
 # Write to DB
 echo "$DATA_BINARY" > tmp/profitability_binary_data.tmp
-#curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/profitability_binary_data.tmp
+curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/profitability_binary_data.tmp
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/PROFIT_LOCK 
