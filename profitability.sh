@@ -27,6 +27,7 @@ for ARGUMENT in "$@"; do
 		set -x
 	elif [ "$ARGUMENT" == "-d" ]; then
 		DEBUG=1
+		NO_WRITE=1
 	elif [[ $ARGUMENT =~ ^-p[0-9]+ ]]; then
 		L_INDEX=${ARGUMENT:2}
 		POOL_LIST=("${POOL_LIST[@]:$L_INDEX:1}")
@@ -69,8 +70,8 @@ do
 	fi
 	
 	##############  Calculate pool revenue per 24h period
-	SQL="SELECT last(revenue) from profitability where label='"${LABEL}"'"
-	LAST_RECORD=$(get_last_record $SQL)"000000000"
+	SQL="SELECT last(revenue_24h) from pool_profitability where label='"${LABEL}"'"
+	LAST_RECORD=$(get_last_record "$SQL")
 	# debug info
 	if (( DEBUG == 1 )); then
 		echo "SQL: ${SQL}"
@@ -189,7 +190,11 @@ done
 
 # Write to DB
 echo "$DATA_BINARY" > tmp/profitability_binary_data.tmp
-curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/profitability_binary_data.tmp
+if (( NO_WRITE == 1 ));then
+	echo "NO WRITE enabled. Skipping influxDB http write"
+else
+	curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/profitability_binary_data.tmp
+fi
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/PROFIT_LOCK 
