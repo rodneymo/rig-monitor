@@ -22,6 +22,8 @@ for ARGUMENT in "$@"; do
                 set -x
         elif [ "$ARGUMENT" == "-d" ]; then
                 DEBUG=1
+        elif [ "$ARGUMENT" == "-nw" ]; then
+                NO_WRITE=1
 	elif [[ $ARGUMENT =~ ^-p[0-9]+ ]]; then
 #		MYSQL_VERBOSE=" -vvv --show-warnings " 
 		L_INDEX=${ARGUMENT:2}
@@ -48,7 +50,12 @@ done
 IFS=$SAVEIFS
 
 echo "$DATA_BINARY" > tmp/pool_binary_data.tmp
-curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/pool_binary_data.tmp
+if (( NO_WRITE == 1 ));then
+        echo "NO WRITE enabled. Skipping influxDB http write"
+else
+        curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/pool_binary_data.tmp
+fi
+
 
 rm ${BASE_DIR}/run/POOL_LOCK 
 

@@ -121,6 +121,7 @@ fi
 PAYMENTS_URL="${BASE_API_URL}/payments/${WALLET_ADDR}"
 SQL="SELECT last(amount) from pool_payments where label='"${LABEL}"'"
 LAST_RECORD=$(get_last_record "$SQL")
+LAST_RECORD=`echo $LAST_RECORD | awk '/[0-9]+/ {print substr($1,1,10) };' `
 PAYMENTS_OUTPUT=`curl -s "${PAYMENTS_URL}" | jq --arg LAST_RECORD ${LAST_RECORD} -r '.data[]? | select (.date > ($LAST_RECORD | tonumber))'`
 
 if (( DEBUG == 1 )); then

@@ -27,6 +27,7 @@ for ARGUMENT in "$@"; do
 		set -x
 	elif [ "$ARGUMENT" == "-d" ]; then
 		DEBUG=1
+	elif [ "$ARGUMENT" == "-nw" ]; then
 		NO_WRITE=1
 	elif [[ $ARGUMENT =~ ^-p[0-9]+ ]]; then
 		L_INDEX=${ARGUMENT:2}
@@ -118,11 +119,8 @@ do
 	MEASUREMENT="pool_profitability"
 	TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL}"
 	while read  _DATE _REVENUE;do 
-		if [[ "$POOL_TYPE" == "ETHERMINE" ]]; then
-			_REVENUE=`awk "BEGIN {print $_REVENUE/1E18}"`
-		fi
-		REVENUE_BTC=`awk "BEGIN {print $_REVENUE*$PRICE_BTC}"`  
-		REVENUE_QC=`awk "BEGIN {print $_REVENUE*$PRICE_QC}"`  
+		REVENUE_BTC=`awk "BEGIN {print $_REVENUE * $PRICE_BTC}"`  
+		REVENUE_QC=`awk "BEGIN {print $_REVENUE * $PRICE_QC}"`  
 		# Default value added to power_costs_24h in case no rigs are marked as using current pool and thus POWER_USAGE would be empty
 		LINE="${MEASUREMENT},${TAGS} revenue_24h=${_REVENUE},revenue_btc_24h=${REVENUE_BTC},revenue_qc_24h=${REVENUE_QC},power_costs_24h=${POWER_COSTS_24H[${_DATE}]:-0} ${_DATE}"
 		if (( DEBUG == 1 )); then
