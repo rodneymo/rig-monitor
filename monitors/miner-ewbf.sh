@@ -21,8 +21,8 @@ fi
 # parse miner output, prepare data for influxdb ingest and filter out null tags, fields
 if [ "$EWBF_READOUT" == "" ]; then
 	echo "CURL FAILED"
-	DATA_BINARY="miner_system,rig_id=${RIG_ID},miner=ewbf,coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS},active_gpus=-1,target_hr=${TARGET_HR},total_hr=-1,max_power=${MAX_POWER}" 
-	curl -s -i -m 5 -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
+	DATA_BINARY="${DATA_BINARY}"$'\n'"miner_system,rig_id=${RIG_ID},miner=ewbf,coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS},active_gpus=-1,target_hr=${TARGET_HR},total_hr=-1,max_power=${MAX_POWER}" 
+	#curl -s -i -m 5 -XPOST 'http://localhost:8086/write?db=rigdata' --data-binary "${DATA_BINARY}"
 
 else
 	echo "CURL SUCCESS"
