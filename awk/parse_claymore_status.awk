@@ -32,20 +32,20 @@ BEGIN {
 /^ETH - Total Speed: / { 
 	#print $0
 	#print $2,$4,$6,
-	total_hr=$2
-	sub(/ .*/,"",total_hr)
+	hr=$2
+	sub(/ .*/,"",hr)
 
-	total_shares=$4
-	sub(/\([0-9+]+\)/,"",total_shares)
+	valid_shares=$4
+	sub(/\([0-9+]+\)/,"",valid_shares)
 
 	_gpu_shares=$4
 	gsub(/^[0-9]+\(|\)/,"",_gpu_shares)
 	split(_gpu_shares,gpu_shares,"+")
 	for ( i = 0; i < NUM_GPUS; i++ ) {
-		gpu[i,"SHARES"]=gpu_shares[i+1]
+		gpu[i,"VALID_SHARES"]=gpu_shares[i+1]
 	}
 
-	rej_shares=$6
+	invalid_shares+=$6
 	mining_time=$8
 }	
 
@@ -54,20 +54,20 @@ BEGIN {
 /^  (DCR|SC|LBC|PASC) - Total Speed: / { 
 	#print $0
 	#print $2,$4,$6
-	total_hr_dcoin=$2
-	sub(/ .*/,"",total_hr_dcoin)
+	hr_dcoin=$2
+	sub(/ .*/,"",hr_dcoin)
 
-	total_shares_dcoin=$4
-	sub(/\([0-9+]+\)/,"",total_shares_dcoin)
+	valid_shares_dcoin+=$4
+	sub(/\([0-9+]+\)/,"",valid_shares_dcoin)
 
 	_gpu_shares_dcoin=$4
 	gsub(/^[0-9]+\(|\)/,"",_gpu_shares_dcoin)
 	split(_gpu_shares_dcoin,gpu_shares_dcoin,"+")
 	for ( i = 0; i < NUM_GPUS; i++ ) {
-		gpu[i,"SHARES_DCOIN"]=gpu_shares_dcoin[i+1]
+		gpu[i,"VALID_SHARES_DCOIN"]=gpu_shares_dcoin[i+1]
 	}
 
-	rej_shares_dcoin=$6
+	invalid_shares_dcoin+=$6
 }	
 
 #READ ETH GPU HASHRATE E.G.
@@ -103,12 +103,13 @@ BEGIN {
 /^Incorrect ETH shares:/ { 
 	#print $0
 	gpu_field=2
-	while ( gpu_field < NF ) {
+	while ( gpu_field <= NF ) {
 		gpu_index = $gpu_field
 		gpu_inc_shares=$gpu_field
 		gsub(/GPU| [0-9]+/,"",gpu_index)
 		sub(/GPU[0-9 ]+ /,"",gpu_inc_shares)
-		gpu[gpu_index,"INC_SHARES"] = gpu_inc_shares
+		gpu[gpu_index,"INVALID_SHARES"] = gpu_inc_shares
+		invalid_shares+=gpu_inc_shares
 		gpu_field++
 	}
 }
@@ -118,11 +119,12 @@ BEGIN {
 /^Incorrect (DCR|SC|LBC|PASC) shares:/ { 
 	#print $0
 	gpu_field=2
-	while ( gpu_field < NF ) {
+	while ( gpu_field <= NF ) {
 		gpu_index = substr($gpu_field,4,1)
 		gpu_inc_shares=$gpu_field
 		sub(/GPU[0-9 ]+/,"",gpu_inc_shares)
-		gpu[gpu_index,"INC_SHARES_DCOIN"] = gpu_inc_shares
+		gpu[gpu_index,"INVALID_SHARES_DCOIN"] = gpu_inc_shares
+		invalid_shares_dcoin+=gpu_inc_shares
 		gpu_field++
 	}
 }
@@ -169,22 +171,22 @@ BEGIN {
 }
 
 END {
-        print "miner_system,rig_id=" rig_id ",miner=claymore,coin=" coin ",dcoin=" dcoin " " "installed_gpus=" installed_gpus ",active_gpus=" NUM_GPUS ",target_hr="target_hr ",total_hr=" total_hr",avg_hr_1m=" avg_hr_1m ",total_shares=" total_shares ",rej_shares=" rej_shares ",target_hr_dcoin=" target_hr_dcoin ",total_hr_dcoin=" total_hr_dcoin ",avg_hr_1m_dcoin=" avg_hr_1m_dcoin ",total_shares_dcoin=" total_shares_dcoin ",rej_shares_dcoin=" rej_shares_dcoin ",mining_time=\"" mining_time "\""
+        print "miner_system,rig_id=" rig_id ",miner=claymore,coin=" coin ",dcoin=" dcoin " " "installed_gpus=" installed_gpus ",active_gpus=" NUM_GPUS ",target_hr="target_hr ",hr=" hr",avg_hr_1m=" avg_hr_1m ",valid_shares=" valid_shares ",invalid_shares=" invalid_shares ",target_hr_dcoin=" target_hr_dcoin ",hr_dcoin=" hr_dcoin ",avg_hr_1m_dcoin=" avg_hr_1m_dcoin ",valid_shares_dcoin=" valid_shares_dcoin ",invalid_shares_dcoin=" invalid_shares_dcoin ",mining_time=\"" mining_time "\""
 
         for ( gpu_id = 0; gpu_id < NUM_GPUS; gpu_id++ ) {
-        	print "miner_gpu,rig_id=" rig_id ",miner=claymore,gpu_id=" gpu_id ",gpu_specs=" gpu[gpu_id,"SPECS"] " " "gpu_hr=" gpu[gpu_id,"HR"] ",gpu_shares=" gpu[gpu_id,"SHARES"] ",gpu_inc_shares=" gpu[gpu_id,"INC_SHARES"] ",gpu_hr_dcoin=" gpu[gpu_id,"HR_DCOIN"] ",gpu_shares_dcoin=" gpu[gpu_id,"SHARES_DCOIN"] ",gpu_inc_shares_dcoin="  gpu[gpu_id,"INC_SHARES_DCOIN"] ",gpu_max_temp=" gpu_max_temp ",gpu_temp=" gpu[gpu_id,"TEMP"] ",gpu_fan=" gpu[gpu_id,"FAN"]
+        	print "miner_gpu,rig_id=" rig_id ",miner=claymore,gpu_id=" gpu_id ",gpu_specs=" gpu[gpu_id,"SPECS"] " " "gpu_hr=" gpu[gpu_id,"HR"] ",gpu_valid_shares=" gpu[gpu_id,"VALID_SHARES"] ",gpu_invalid_shares=" gpu[gpu_id,"INVALID_SHARES"] ",gpu_hr_dcoin=" gpu[gpu_id,"HR_DCOIN"] ",gpu_valid_shares_dcoin=" gpu[gpu_id,"SHARES_DCOIN"] ",gpu_invalid_shares_dcoin="  gpu[gpu_id,"INVALID_SHARES_DCOIN"] ",gpu_max_temp=" gpu_max_temp ",gpu_temp=" gpu[gpu_id,"TEMP"] ",gpu_fan=" gpu[gpu_id,"FAN"]
         }
 	
 	if (TRACE != 0) { 
 	print "SYSTEM NAME: " rig_id
-	print "\tETH CURRENT HASHRATE: " total_hr
+	print "\tETH CURRENT HASHRATE: " hr
 	print "\tETH AVERAGE HASHRATE ETH: " avg_hr_1m
-	print "\tETH TOTAL SHARES: " total_shares
-	print "\tETH REJECTED SHARES: " rej_shares
-	print "\tDCR/SC/LBC/PASC CURRENT HASHRATE: " total_hr_dcoin
+	print "\tETH VALID SHARES: " valid_shares
+	print "\tETH INVALID VALID_SHARES: " invalid_shares
+	print "\tDCR/SC/LBC/PASC CURRENT HASHRATE: " hr_dcoin
 	print "\tDCR/SC/LBC/PASC AVERAGE HASHRATE: " avg_hr_1m_dcoin
-	print "\tDCR/SC/LBC/PASC TOTAL SHARES: " total_shares_dcoin
-	print "\tDCR/SC/LBC/PASC REJECTED SHARES: " rej_shares_dcoin
+	print "\tDCR/SC/LBC/PASC VALID_SHARES: " valid_shares_dcoin
+	print "\tDCR/SC/LBC/PASC INVALID SHARES: " invalid_shares_dcoin
 	print "\tETH MINING TIME: " mining_time
 	print "\tETH DAG #: " dag ", DAG SIZE: " dag_size
 
@@ -192,11 +194,11 @@ END {
 		print "GPU#" i
 		print "\tETH HASHRATE: " gpu[i,"HR"]
 		print "\tSPECS: " gpu[i,"SPECS"]
-		print "\tETH SHARES: " gpu[i,"SHARES"]
-		print "\tETH INCORRECT_SHARES: " gpu[i,"INC_SHARES"]
+		print "\tETH VALID SHARES: " gpu[i,"VALID_SHARES"]
+		print "\tETH INVALID SHARES: " gpu[i,"INVALID_SHARES"]
 		print "\tDCR/SC/LBC/PASC HASHRATE: " gpu[i,"HR_DCOIN"]
-		print "\tDCR/SC/LBC/PASC SHARES: " gpu[i,"SHARES_DCOIN"]
-		print "\tDCR/SC/LBC/PASC INCORRECT SHARES: " gpu[i,"INC_SHARES_DCOIN"]
+		print "\tDCR/SC/LBC/PASC VALID SHARES: " gpu[i,"VALID_SHARES_DCOIN"]
+		print "\tDCR/SC/LBC/PASC INVALID SHARES: " gpu[i,"INVALID_SHARES_DCOIN"]
 		print "\tTEMP.(C): " gpu[i,"TEMP"]
 		print "\tFAN SPEED: " gpu[i,"FAN"]
 	}

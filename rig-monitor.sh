@@ -22,6 +22,8 @@ for ARGUMENT in "$@"; do
         if [ "$ARGUMENT" == "-bt" ]; then
                 set -x
 		set -o functrace
+        elif [ "$ARGUMENT" == "-nw" ]; then
+                NO_WRITE=1
         elif [ "$ARGUMENT" == "-d" ]; then
                 DEBUG=1
 	elif [[ $ARGUMENT =~ ^-r[0-9]+ ]]; then
@@ -51,7 +53,9 @@ done
 
 # write out each rig to database
 echo "$DATA_BINARY" > tmp/rig_binary_data.tmp
-curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/rig_binary_data.tmp
+if (( NO_WRITE == 0 )); then
+	curl -s -i -XPOST 'http://'${INFLUX_HOST}':8086/write?db='${INFLUX_DB} --data-binary @tmp/rig_binary_data.tmp
+fi
 
 IFS=$SAVEIFS
 rm ${BASE_DIR}/run/RIG_LOCK 
