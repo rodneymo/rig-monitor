@@ -31,7 +31,7 @@ bookkeeping () {
 }       
 
 get_last_record () {
-        local _LAST_RECORD=`curl -sG 'http://localhost:8086/query?pretty=true' --data-urlencode "db=rigdata" --data-urlencode "epoch=ns" --data-urlencode \
+        local _LAST_RECORD=`curl -sG "http://${INFLUX_HOST}:8086/query?pretty=true" --data-urlencode "db=${INFLUX_DB}" --data-urlencode "epoch=ns" --data-urlencode \
                 "q=$1" | jq -r '.results[0].series[0].values[0][0]' | sed 's/null/0/g'  `
         if (( _LAST_RECORD == 0 )); then
                 # Get epoch from 1 month ago and round it to 12:00am
