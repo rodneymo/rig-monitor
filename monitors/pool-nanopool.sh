@@ -46,7 +46,7 @@ if [ "$API_STATUS" == "false" ]; then
 	echo "NO DATA FOUND"
 else
 	MEASUREMENT="worker_stats"
-	WORKER_TAG_AND_FIELDS=`echo $GENERALINFO_OUTPUT | jq -r '.data | .workers | .[] | "rig_id=\(.id) avg_hr_24h=\(.avg_h24),hr=\(.hashrate),shares=\(.rating),lastshare=\(.lastShare)"' `
+	WORKER_TAG_AND_FIELDS=`echo $GENERALINFO_OUTPUT | jq -r '.data | .workers | .[] | "rig_id=\(.id) avg_hr_24h=\(.h24),hr=\(.hashrate),shares=\(.rating),lastshare=\(.lastshare)"' `
 	while read -r WORKER_TAG FIELDS; do
 		TAGS="pool_type=${POOL_TYPE},crypto=${CRYPTO},label=${LABEL},${WORKER_TAG}"
 		LINE="${MEASUREMENT},${TAGS} ${FIELDS} ${RUN_TIME}"
