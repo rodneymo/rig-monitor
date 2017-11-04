@@ -25,7 +25,7 @@ if (( CONNECTION_ERROR == 0 ));then
 	LINE="miner_system,rig_id=${RIG_ID},miner=sgminer,coin=${COIN_LABEL} installed_gpus=${INSTALLED_GPUS},active_gpus=${NUM_GPUS},$FIELDS,target_hr=${TARGET_HR},mining_time=\"${MINING_TIME}\" $TIME"
 	DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
 
-	GPU_TAG_AND_FIELDS=`echo $SGMINER_READOUT | jq -r '.devs[0].DEVS[] | "gpu_id=\(.GPU) gpu_online=\(.Status),gpu_hr=\(."MHS 5s"),gpu_valid_shares=\(.Accepted),gpu_invalid_shares=\(.Rejected),gpu_hw_erros=\(."Hardware Errors"),gpu_raw_intensity=\(.RawIntensity),gpu_temp=\(.Temperature),gpu_fan=\(."Fan Percent")"' | sed -e 's/gpu_online=Alive/gpu_online=1/g' `
+	GPU_TAG_AND_FIELDS=`echo $SGMINER_READOUT | jq -r '.devs[0].DEVS[] | "gpu_id=\(.GPU) gpu_online=\(.Status),gpu_hr=\(."MHS 5s"),gpu_valid_shares=\(.Accepted),gpu_invalid_shares=\(.Rejected),gpu_hw_errors=\(."Hardware Errors"),gpu_raw_intensity=\(.RawIntensity),gpu_temp=\(.Temperature),gpu_fan=\(."Fan Percent")"' | sed -e 's/gpu_online=Alive/gpu_online=1/g' `
 	while read -r _GPU_TAG_AND_FIELDS;do
 		LINE="miner_gpu,miner=sgminer,rig_id=${RIG_ID},$_GPU_TAG_AND_FIELDS $TIME"
 		DATA_BINARY="${DATA_BINARY}"$'\n'"${LINE}"
