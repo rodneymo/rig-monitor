@@ -1,4 +1,4 @@
-rig-monitor v1.x (shell script based) is no longer maintained. 
+rig-monitor v1.x (shell script based) is no longer being develped  nor maintained. 
 
 rig-monitor v2.0 (written in Golang includes  cross-platform support) has been released. You can download it here: https://github.com/rodneymo/rig-monitorv2/blob/master/README.md
 Installation instructions here: http://randomcryptostuff.blogspot.nl/2018/05/new-version-20beta1-installation.html
